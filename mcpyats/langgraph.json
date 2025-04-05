@@ -1,0 +1,12 @@
+{
+  "entrypoints": {
+    "MCpyATS": "mcpyats:compiled_graph"
+  },
+  "graphs": {
+    "MCpyATS": "mcpyats:compiled_graph"
+  },
+  "dependencies": [
+    "mcpyats/mcpyats.py"
+  ],
+  "env_file": ".env"
+}
