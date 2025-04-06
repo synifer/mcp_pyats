@@ -39,7 +39,8 @@ RUN echo "==> Upgrading pip and Installing pyATS[full] and other Python packages
         pydantic \
         python-dotenv \
         # Install pyats[full] - this can take a while and make the image large
-        pyats[full]
+        pyats[full]==25.2.0
+
 
 # Copy your application code into the container's working directory
 # This assumes pyats_mcp_server.py is in the same directory as the Dockerfile

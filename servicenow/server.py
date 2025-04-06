@@ -106,14 +106,76 @@ def send_response(response_data):
     sys.stdout.flush()
 
 def handle_tools_discover():
-    """Handle tools discovery (tools/discover)."""
     send_response({
         "result": [
-            {"name": "get_servicenow_problem_sys_id", "description": "Get the sys_id for a ServiceNow problem by its number", "parameters": {"type": "object", "properties": {"problem_number": {"type": "string"}}}},
-            {"name": "get_servicenow_problem_state", "description": "Get the current state of a ServiceNow problem", "parameters": {"type": "object", "properties": {"sys_id": {"type": "string"}}}},
-            {"name": "get_servicenow_problem_details", "description": "Get detailed information for a ServiceNow problem", "parameters": {"type": "object", "properties": {"problem_number": {"type": "string"}}}},
-            {"name": "create_servicenow_problem", "description": "Create a new ServiceNow problem", "parameters": {"type": "object", "properties": {"problem_data": {"type": "object"}}}},
-            {"name": "update_servicenow_problem", "description": "Update a ServiceNow problem", "parameters": {"type": "object", "properties": {"sys_id": {"type": "string"}, "update_data": {"type": "object"}}}},
+            {
+                "name": "create_servicenow_problem",
+                "description": (
+                    "🚨 Use this to create a new ServiceNow problem. "
+                    "Only use when the user explicitly says to create a new problem ticket. "
+                    "Do NOT use this tool to update or retrieve existing problems."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "problem_data": {"type": "object"}
+                    }
+                }
+            },
+            {
+                "name": "get_servicenow_problem_sys_id",
+                "description": (
+                    "🔍 Only use if the user provides a problem number and asks to fetch its ServiceNow sys_id. "
+                    "Do NOT use unless user explicitly asks to look up a problem by number."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "problem_number": {"type": "string"}
+                    }
+                }
+            },
+            {
+                "name": "get_servicenow_problem_state",
+                "description": (
+                    "📊 Only use if the user provides a sys_id and wants to check the current problem state. "
+                    "Do NOT use for new problem creation or general issue diagnosis."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sys_id": {"type": "string"}
+                    }
+                }
+            },
+            {
+                "name": "get_servicenow_problem_details",
+                "description": (
+                    "📄 Use to get full JSON details of a specific problem, ONLY when the user gives a number. "
+                    "Not needed for general actions or new problem creation."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "problem_number": {"type": "string"}
+                    }
+                }
+            },
+            {
+                "name": "update_servicenow_problem",
+                "description": (
+                    "✏️ Use this to update an existing problem in ServiceNow. "
+                    "Only use if the user asks to modify fields in a known problem by sys_id. "
+                    "NEVER use this when creating new problems."
+                ),
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "sys_id": {"type": "string"},
+                        "update_data": {"type": "object"}
+                    }
+                }
+            }
         ]
     })
 

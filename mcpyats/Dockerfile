@@ -11,13 +11,14 @@ RUN echo "==> Installing Python3 and pip ...." \
   && apt-get update && apt-get install -y --fix-missing python3 python3-pip
 
 RUN echo "==> Install langchain requirements.." \
-  && pip install --break-system-packages -U --quiet langchain_experimental langchain langchain-community langchain_google_genai
+  && pip install --break-system-packages -U --quiet langchain_experimental langchain langchain-community langchain_google_genai langchain_openai
 
 RUN echo "==> Adding dotenv ..." \
   && pip install --break-system-packages python-dotenv
 
 RUN echo "==? Install langgraph and required components" \
   && pip install --break-system-packages --upgrade "langgraph-cli[inmem]" \
+  && pip install --break-system-packages --upgrade "langgraph>=0.0.30" \
   && pip install --break-system-packages langsmith \
   && pip install --break-system-packages fastapi \
   && pip install --break-system-packages mcp \
@@ -29,10 +30,10 @@ RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /
 RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 RUN apt-get update && apt-get install -y docker-ce-cli
 
-RUN echo "==? Install sse client" \
- && pip install --break-system-packages aiohttp aiohttp-sse-client
+RUN pip install --break-system-packages --upgrade langgraph
 
 COPY . /selectorplus/
+
 COPY ./scripts /scripts/
 
 CMD ["/bin/bash", "/scripts/startup.sh"]

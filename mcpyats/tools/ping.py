@@ -78,8 +78,8 @@ def ping_tool(input_data):
 
 # ✅ Register LangChain Tool
 ping_tool_obj = Tool(
-    name="ping_tool",
-    description="Performs a ping request to check if an IP is reachable and measures latency.",
+    name="public_IP_ping_tool",
+    description="Performs a ping request to check if a public IP is reachable from the host machine and measures latency.",
     func=ping_tool
 )
 
