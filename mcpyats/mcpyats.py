@@ -20,9 +20,9 @@ from typing import Dict, Any, List, Optional, Union, Annotated
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt.tool_node import tools_condition, ToolNode
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
 
 load_dotenv()
 
@@ -205,7 +205,8 @@ class MCPToolDiscovery:
         except Exception as e:
             print(f"❌ Error discovering tools: {e}")
             return []
-
+        
+    @traceable
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any], timeout=60):
         """Calls a tool in the MCP container with logging and error handling."""
         logger.info(f"🔍 Attempting to call tool: {tool_name}")
@@ -300,7 +301,7 @@ class MCPToolDiscovery:
             logger.critical(f"🔥 Critical tool call error", exc_info=True) 
             return "Critical Error: tool call failure"
     
-
+@traceable
 async def get_tools_for_service(service_name, command, discovery_method, call_method, service_discoveries):
     """Enhanced tool discovery for each service."""
     print(f"🕵️ Discovering tools for: {service_name}")
@@ -359,7 +360,7 @@ async def get_tools_for_service(service_name, command, discovery_method, call_me
 
     return tools
 
-
+@traceable
 async def load_all_tools():
     """Async function to load tools from different MCP services and local files."""
     print("🚨 COMPREHENSIVE TOOL DISCOVERY STARTING 🚨")
@@ -374,7 +375,9 @@ async def load_all_tools():
         ("filesystem-mcp", ["node", "/app/dist/index.js", "/projects"], "tools/list", "tools/call"),
         ("netbox-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
         ("google-search-mcp", ["node", "/app/build/index.js"], "tools/list", "tools/call"),
-        ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),        
+        ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
+        ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
     ]
 
     try:
@@ -447,27 +450,27 @@ document_ids = vector_store.add_documents(tool_documents)
 
 print("🔧 All bound tools:", [t.name for t in valid_tools])
 
-llm = ChatOpenAI(model_name="gpt-4o", temperature=0.1)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro-exp-03-25", temperature=0.0)
 
 llm_with_tools = llm.bind_tools(valid_tools)
 
-def format_tool_descriptions(tools: List[Tool]) -> str:
-    """Formats the tool descriptions into a string."""
-    return "\n".join(f"- {tool.name}: {tool.description}" for tool in tools)
-
-
+@traceable
 class ContextAwareToolNode(ToolNode):
     """
     A specialized ToolNode that handles tool execution and updates the graph state
     based on the tool's response.  It assumes that tools return a dictionary.
     """
 
-    def invoke(self, state: GraphState) -> GraphState:
+    async def ainvoke(
+        self, state: GraphState, config: Optional[RunnableConfig] = None, **kwargs: Any
+    ):
         """
         Executes the tool call specified in the last AIMessage and updates the state.
 
         Args:
             state: The current graph state.
+            config: Optional config object.
+            **kwargs: Additional arguments for the invocation.
 
         Returns:
             The updated graph state.
@@ -485,43 +488,48 @@ class ContextAwareToolNode(ToolNode):
         context = state.get("context", {})
 
         for tool_call in tool_calls:
-            tool = self.tools_by_name[tool_call.name]  # Corrected attribute access
-            tool_input = tool_call.args
+            tool_name = tool_call['name']
 
-            logger.info(f"Tool Input (Before Filtering): {tool_input}")  # Logging for debugging
+            if not (tool := self.tools_by_name.get(tool_name)):
+                logger.warning(
+                    f"Tool '{tool_name}' not found in the available tools. Skipping this tool call."
+                )
+                continue
 
-            # Filter out null values from tool_input
+            tool_input = tool_call['args']
             filtered_tool_input = {k: v for k, v in tool_input.items() if v is not None}
+            logger.debug(f"Calling tool: {tool.name} with args: {filtered_tool_input}")
 
-            logger.info(f"Calling tool: {tool.name} with args: {filtered_tool_input}")
-            tool_response = tool.invoke(filtered_tool_input)  # Execute the tool
+            tool_response = await tool.ainvoke(filtered_tool_input)
 
             if not isinstance(tool_response, dict):
-                raise ValueError(
-                    f"Tool {tool.name} should return a dictionary, but returned {type(tool_response)}"
-                )
+                tool_response = {tool_name: tool_response}
 
             used = set(context.get("used_tools", []))
             used.add(tool.name)
-            state["used_tools"] = list(used)
-            logger.info(f"Tool {tool.name} returned: {tool_response}")
+            context["used_tools"] = list(used)
 
             # Update the context with the tool's output
             context.update(tool_response)
 
             # Create a ToolMessage and add it to the message history
+
             tool_message = ToolMessage(
-                tool_call_id=tool_call.id,
-                content=tool_response.get("content", str(tool_response)),  # Ensure content is always a string
-                name=tool_call.name,
+                tool_call_id=tool_call['id'],
+                content=tool_response.get("content", str(tool_response)),
+                name=tool_call['name'],
             )
+
             messages.append(tool_message)
 
-        return {"messages": messages, "context": context, "__next__": "assistant"}
-        
-
+        return {
+            "messages": messages,
+            "context": context,
+            "__next__": "handle_tool_results"
+        }
+    
 @traceable
-def select_tools(state: GraphState):
+async def select_tools(state: GraphState):
     messages = state.get("messages", [])
     context = state.get("context", {})
     last_user_message = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
@@ -590,8 +598,9 @@ Consider these guidelines:
         )
 
         logger.info("🤖 Invoking LLM for tool selection...")
-        tool_selection_response = llm.invoke(selection_prompt_messages)
+        tool_selection_response = await llm.ainvoke(selection_prompt_messages)
         raw_selection = tool_selection_response.content.strip()
+
         logger.info(f"📝 LLM raw tool selection: '{raw_selection}'")
 
         if raw_selection.lower() == "none" or not raw_selection:
@@ -668,6 +677,20 @@ GENERAL RULES:
 - NEVER assume a ServiceNow ticket is needed unless the user says so.
 - ⚠️ If the user does NOT mention “ServiceNow” or “ticket,” DO NOT CALL ANY ServiceNow tool.
 
+📧 EMAIL TOOLS:
+- Use email tools (like `email_send_message`) ONLY when the user explicitly asks to send an email.
+- Examples: "Send an email to team@example.com with the results", "Email the configuration to the network admin".
+- Required: Recipient email address(es), subject line, and the body content for the email.
+- Specify clearly who the email should be sent to and what information it should contain.
+- DO NOT use email tools for Slack notifications, saving files, or internal logging unless specifically instructed to email that information.
+
+🤖 CHATGPT ANALYSIS TOOLS:
+- Use the `ask_chatgpt` tool ONLY when the user explicitly asks you to leverage an external ChatGPT model for specific analysis, summarization, comparison, or generation tasks that go beyond your primary function or require a separate perspective.
+- Examples: "Analyze this Cisco config for security best practices using ChatGPT", "Ask ChatGPT to summarize this document", "Get ChatGPT's explanation for this routing behavior".
+- Required: The `content` (e.g., configuration text, document snippet, specific question) that needs to be sent to the external ChatGPT tool.
+- Clearly state *why* you are using the external ChatGPT tool (e.g., "To get a detailed security analysis from ChatGPT...").
+- Do NOT use this tool for tasks you are expected to perform directly based on your core instructions or other available tools (like running a show command or saving a file). Differentiate between *your* analysis/response and the output requested *from* the external ChatGPT tool.
+
 🎯 TOOL CHAINING:
 - Do NOT chain tools together unless the user clearly describes multiple steps.
   - Example: “Save the config to GitHub and notify Slack” → You may use two tools.
@@ -681,9 +704,8 @@ GENERAL RULES:
 """
 
 
-
 @traceable
-def assistant(state: GraphState):
+async def assistant(state: GraphState):
     """Handles assistant logic and LLM interaction, with support for sequential tool calls."""
     messages = state.get("messages", [])
     context = state.get("context", {})
@@ -717,7 +739,7 @@ def assistant(state: GraphState):
             new_messages = [SystemMessage(content=system_msg)] + messages
 
             llm_with_tools = llm.bind_tools(tools_to_use)
-            response = llm_with_tools.invoke(new_messages, config={"tool_choice": "auto"})
+            response = await llm_with_tools.ainvoke(new_messages, config={"tool_choice": "auto"})
 
             if hasattr(response, "tool_calls") and response.tool_calls:
                 # Continue using tools
@@ -735,7 +757,7 @@ def assistant(state: GraphState):
     try:
         logger.info(f"assistant: Invoking LLM with new_messages: {new_messages}")
         # Always use auto tool choice to allow model to decide which tools to use
-        response = llm_with_tools.invoke(new_messages, config={"tool_choice": "auto"})
+        response = await llm_with_tools.ainvoke(new_messages, config={"tool_choice": "auto"})
         logger.info(f"Raw LLM Response: {response}")
 
         if not isinstance(response, AIMessage):
@@ -745,59 +767,61 @@ def assistant(state: GraphState):
         response = AIMessage(content=f"LLM Error: {e}")
 
     if hasattr(response, "tool_calls") and response.tool_calls:
-        # Update context to indicate we're in a tool sequence
         context["run_mode"] = "continue"
         return {"messages": [response], "context": context, "__next__": "tools"}
     else:
-        # Reset mode if no tools are called
         context["run_mode"] = "start"
         return {"messages": [response], "context": context, "__next__": "__end__"}
 
 @traceable
-def handle_tool_results(state: GraphState):
-    """Handles tool results and determines if more tools should be used."""
+async def handle_tool_results(state: GraphState):
     messages = state.get("messages", [])
     context = state.get("context", {})
-    
+    run_mode = context.get("run_mode", "start")
+
+    # Always reset run_mode to prevent infinite loops unless LLM explicitly continues
+    context["run_mode"] = "start"
+
+    # If assistant previously requested tool(s), allow assistant to assess next step
     return {
         "messages": messages,
         "context": context,
+        "__next__": "assistant"
     }
 
 # Graph setup
 graph_builder = StateGraph(GraphState)
+
+# Define core nodes
 graph_builder.add_node("select_tools", select_tools)
 graph_builder.add_node("assistant", assistant)
 graph_builder.add_node("tools", ContextAwareToolNode(tools=valid_tools))
-# Keep handle_tool_results node if it does any other state cleanup, 
-# otherwise, you could potentially connect tools directly to assistant if 
-# the ToolNode itself handles adding the ToolMessage correctly. 
-# Assuming ContextAwareToolNode handles adding the message, let's keep the handler for clarity for now.
-graph_builder.add_node("handle_tool_results", handle_tool_results) 
+graph_builder.add_node("handle_tool_results", handle_tool_results)
 
-# START
+# Define clean and minimal edges
+# Start flow
 graph_builder.add_edge(START, "select_tools")
 
-# After selection, go to assistant
+# After tool selection, go to assistant
 graph_builder.add_edge("select_tools", "assistant")
 
-# Assistant decides next step (call tool or end)
+# Assistant decides: use tool or end
 graph_builder.add_conditional_edges(
     "assistant",
-    # Check the '__next__' value set within the assistant node
-    lambda state: "tools" if state.get("__next__") == "tools" else "__end__",
+    lambda state: state.get("__next__", "__end__"),
     {
         "tools": "tools",
         "__end__": END,
     }
 )
 
-# After tool execution, go to the handler
+# Tools always go to handler
 graph_builder.add_edge("tools", "handle_tool_results")
 
-# After handling results (e.g., logging, minimal state updates), ALWAYS go back to assistant
+# Tool results always return to assistant
 graph_builder.add_edge("handle_tool_results", "assistant")
 
+# Compile graph
 compiled_graph = graph_builder.compile()
 
 async def run_cli_interaction():

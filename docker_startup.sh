@@ -65,10 +65,20 @@ docker build -t servicenow-mcp ./servicenow
 if [ $? -ne 0 ]; then echo "Error building servicenow-mcp image."; exit 1; fi
 echo "servicenow-mcp image built successfully."
 
+echo "Building email-mcp image..."
+docker build -t email-mcp ./email
+if [ $? -ne 0 ]; then echo "Error building email-mcp image."; exit 1; fi
+echo "email-mcp image built successfully."
+
 echo "Building pyats-mcp image..."
 docker build -t pyats-mcp ./pyats_mcp_server
 if [ $? -ne 0 ]; then echo "Error building pyats-mcp image."; exit 1; fi
 echo "pyats-mcp image built successfully."
+
+echo "Building chatgpt-mcp image..."
+docker build -t chatgpt-mcp ./chatgpt
+if [ $? -ne 0 ]; then echo "Error building chatgpt-mcp image."; exit 1; fi
+echo "chatgpt-mcp image built successfully."
 
 # Build langgraph container
 echo "Building langgraph container (mcpyats)..."
@@ -124,8 +134,17 @@ echo "Starting service now-mcp container..."
 docker run -d --name servicenow-mcp \
  --env-file .env \
  servicenow-mcp python3 server.py --restart unless-stopped
-
 echo "servicenow-mcp container started."
+
+echo "Starting email-mcp container..."
+docker run -dit --name email-mcp --env-file .env --dns 8.8.8.8 email-mcp
+echo "email-mcp container started."
+
+echo "Starting cahtgpt-mcp container..."
+docker run -dit --name chatgpt-mcp \
+ --env-file .env \
+ chatgpt-mcp python3 server.py --restart unless-stopped
+echo "chatgpt-mcp container started."
 
 echo "Starting pyats-mcp container..."
 docker run -d --name pyats-mcp \
