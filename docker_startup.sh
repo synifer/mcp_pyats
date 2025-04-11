@@ -39,7 +39,6 @@ docker build -t excalidraw-mcp ./excalidraw
 if [ $? -ne 0 ]; then echo "Error building excalidraw-mcp image."; exit 1; fi
 echo "excalidraw-mcp image built successfully."
 
-#Filesystem
 echo "Building filesystem-mcp image..."
 docker build -t filesystem-mcp ./filesystem
 if [ $? -ne 0 ]; then echo "Error building filesystem-mcp image."; exit 1; fi
@@ -80,7 +79,11 @@ docker build -t chatgpt-mcp ./chatgpt
 if [ $? -ne 0 ]; then echo "Error building chatgpt-mcp image."; exit 1; fi
 echo "chatgpt-mcp image built successfully."
 
-# Build langgraph container
+echo "Building quickchart-mcp image..."
+docker build -t quickchart-mcp ./quickchart
+if [ $? -ne 0 ]; then echo "Error building quickchart-mcp image."; exit 1; fi
+echo "quickchart-app image built successfully."
+
 echo "Building langgraph container (mcpyats)..."
 docker build -t mcpyats -f ./mcpyats/Dockerfile ./mcpyats
 if [ $? -ne 0 ]; then echo "Error building mcpyats image."; exit 1; fi
@@ -125,7 +128,6 @@ echo "Starting netbox-mcp container..."
 docker run -d --name netbox-mcp -e NETBOX_URL="${NETBOX_URL:-YOUR_SELECTOR_URL}" -e NETBOX_TOKEN="${NETBOX_TOKEN:-NETBOX_TOKEN}" netbox-mcp python3 server.py --restart unless-stopped
 echo "netbox-mcp container started."
 
-#Start Google Search MCP 
 echo "Starting google-search-mcp container..."
 docker run -dit --name google-search-mcp google-search-mcp
 echo "google-search-mcp container started."
@@ -151,16 +153,18 @@ docker run -d --name pyats-mcp \
   -e PYATS_TESTBED_PATH="/app/testbed.yaml" \
   -v "$(pwd)/pyats_mcp_server/testbed.yaml:/app/testbed.yaml" \
   pyats-mcp
-
 echo "pyats-mcp container started."
 
-# # Check if MCP containers are running
-if ! docker ps | grep -q "pyats-mcp"; then
-    echo "pyats-mcp container not found."
+echo "Starting quickchart-mcp container..."
+docker run -dit --name quickchart-mcp quickchart-mcp
+echo "quickchart-mcp container started."
+
+# # Check if last MCP containers are running
+if ! docker ps | grep -q "quickchart-mcp"; then
+    echo "quickchart-mcp container not found."
     exit 1
 fi
 
-# Start langgraph container
 echo "Starting mcpyats container..."
 docker run -p 2024:2024 -dit \
     -v /var/run/docker.sock:/var/run/docker.sock \

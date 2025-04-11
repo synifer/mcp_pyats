@@ -380,6 +380,7 @@ async def load_all_tools():
         ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
         ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
         ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
     ]
 
     try:
