@@ -95,36 +95,53 @@ def schema_to_pydantic_model(name: str, schema: dict):
 
         if json_type == "string":
             field_type = str
-        elif json_type == "integer":
-            field_type = int
-        elif json_type == "number":
-            field_type = float
+        # ... (other simple types: integer, number, boolean) ...
         elif json_type == "boolean":
-            field_type = bool
+             field_type = bool
         elif json_type == "array":
             items_schema = field_schema.get("items")
             if not items_schema:
                 logger.warning(f"⚠️ Skipping field '{field_name}' (array missing 'items')")
-                continue  # Skip malformed array field
+                continue
             item_type = items_schema.get("type", "string")
+
+            # ... (handle array of simple types: string, integer, number, boolean) ...
             if item_type == "string":
-                field_type = List[str]
+                 field_type = List[str]
             elif item_type == "integer":
-                field_type = List[int]
+                 field_type = List[int]
             elif item_type == "number":
-                field_type = List[float]
+                 field_type = List[float]
             elif item_type == "boolean":
-                field_type = List[bool]
+                 field_type = List[bool]
+
+            # --- MODIFICATION START ---
             elif item_type == "object":
-                item_model = schema_to_pydantic_model(name + "_" + field_name + "_Item", items_schema)
-                field_type = List[item_model]
-            else:
+                # Check if the items schema actually defines properties
+                if "properties" in items_schema and items_schema["properties"]:
+                    # If properties are defined, create a specific item model
+                    item_model = schema_to_pydantic_model(name + "_" + field_name + "_Item", items_schema)
+                    field_type = List[item_model]
+                else:
+                    # If no properties defined for items, assume generic dictionaries
+                    logger.warning(f"Treating array item '{field_name}' as generic List[Dict[str, Any]] due to missing/empty properties in items schema.")
+                    field_type = List[Dict[str, Any]] # Use List[Dict] instead of List[EmptyModel]
+            # --- MODIFICATION END ---
+            else: # Handle array of Any
                 field_type = List[Any]
+
         elif json_type == "object":
-            field_type = Dict[str, Any]
-        else:
+             # Also check objects - if no properties, maybe treat as Dict[str, Any]?
+             if "properties" in field_schema and field_schema["properties"]:
+                   # Potentially create nested model if needed, or keep as Dict for simplicity
+                   field_type = Dict[str, Any] # Keeping as Dict for now
+             else:
+                   field_type = Dict[str, Any] # Generic object becomes Dict
+
+        else: # Handle Any type
             field_type = Any
 
+        # ... (rest of the function: optional handling, adding to namespace) ...
         if is_optional:
             field_type = Optional[field_type]
 
@@ -135,7 +152,6 @@ def schema_to_pydantic_model(name: str, schema: dict):
             namespace[field_name] = Field(default=None)
 
     return type(name, (BaseModel,), namespace)
-
 
 class MCPToolDiscovery:
     """Discovers and calls tools in MCP containers."""
@@ -149,7 +165,7 @@ class MCPToolDiscovery:
 
     @traceable
     async def discover_tools(self) -> List[Dict[str, Any]]:
-        """Discovers tools from the MCP container."""
+        """Discovers tools from the MCP container using asyncio.""" # Docstring updated
         print(f"🔍 Discovering tools from container: {self.container_name}")
         print(f"🕵️ Discovery Method: {self.discovery_method}")
 
@@ -160,25 +176,60 @@ class MCPToolDiscovery:
                 "params": {},
                 "id": "1"
             }
-            print(f"Sending discovery payload: {discovery_payload}")
+            print(f"Sending discovery payload: {json.dumps(discovery_payload)}") # Use json.dumps for clarity
             command = ["docker", "exec", "-i", self.container_name] + self.command
-            process = subprocess.run(
-                command,
-                input=json.dumps(discovery_payload) + "\n",
-                capture_output=True,
-                text=True,
+
+            # Use asyncio subprocess compatible with persistent mode (though still executing per call here)
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env={**os.environ, "PYTHONUNBUFFERED": "1"} # Ensure unbuffered output
             )
-            stdout_lines = process.stdout.strip().split("\n")
-            print("📥 Raw discovery response:", stdout_lines)
+
+            # Send payload and get output using communicate()
+            # communicate() writes input, closes stdin, reads stdout/stderr until EOF, waits for process exit.
+            # This works for single request/response even if server is persistent,
+            # as closing stdin usually signals the server to respond.
+            try:
+                 # Added a timeout for safety
+                stdout, stderr = await asyncio.wait_for(
+                     process.communicate(input=json.dumps(discovery_payload).encode() + b"\n"),
+                     timeout=30.0 # Adjust timeout as needed
+                )
+            except asyncio.TimeoutError:
+                 logger.error(f"⏱️ Tool discovery for {self.container_name} timed out.")
+                 try:
+                     process.kill()
+                 except:
+                     pass
+                 return []
+
+
+            stdout_decoded = stdout.decode().strip()
+            stderr_decoded = stderr.decode().strip()
+
+            logger.info(f"🔬 Discovery Subprocess Exit Code: {process.returncode}")
+            logger.info(f"🔬 Discovery Full subprocess stdout: {stdout_decoded}")
+            if stderr_decoded: # Only log stderr if it's not empty
+                 logger.info(f"🔬 Discovery Full subprocess stderr: {stderr_decoded}")
+
+            # Process the response (similar logic as before, but using decoded stdout)
+            stdout_lines = stdout_decoded.split("\n")
+            print("📥 Raw discovery response lines:", stdout_lines) # Keep for debugging
+
             if stdout_lines:
                 last_line = None
                 for line in reversed(stdout_lines):
-                    if line.startswith("{") or line.startswith("["):
-                        last_line = line
+                     # Look for a line that starts like JSON object or array
+                    if line.strip().startswith("{") or line.strip().startswith("["):
+                        last_line = line.strip()
                         break
                 if last_line:
                     try:
                         response = json.loads(last_line)
+                        # --- rest of JSON parsing logic remains the same ---
                         if "result" in response:
                             if isinstance(response["result"], list):
                                 tools = response["result"]
@@ -187,50 +238,70 @@ class MCPToolDiscovery:
                             else:
                                 print("❌ Unexpected 'result' structure.")
                                 return []
+                        # Handle cases where 'result' might not exist but the call was technically successful (exit 0)
+                        elif process.returncode == 0:
+                             print("ℹ️ Discovery response received but no 'result' field found. Assuming no tools.")
+                             tools = []
                         else:
-                            tools = []
+                             # If no 'result' and non-zero exit code, it's likely an error reported in stderr
+                             print(f"❌ Discovery failed. Exit code {process.returncode}. Check stderr logs.")
+                             return []
+
+
                         if tools:
-                            print("✅ Discovered tools:", [tool["name"] for tool in tools])
-                            return tools
+                             print("✅ Discovered tools:", [tool.get("name", "Unnamed Tool") for tool in tools])
+                             self.discovered_tools = tools # Store discovered tools if needed later
+                             return tools
                         else:
-                            print("❌ No tools found in response.")
+                            print("✅ No tools found in response.")
                             return []
                     except json.JSONDecodeError as e:
-                        print(f"❌ JSON Decode Error: {e}")
+                        print(f"❌ JSON Decode Error on line '{last_line}': {e}")
                         return []
                 else:
-                    print("❌ No valid JSON response found.")
+                    print("❌ No valid JSON line found in stdout.")
                     return []
             else:
-                print("❌ No response lines received.")
+                print("❌ No response lines received from stdout.")
                 return []
         except Exception as e:
-            print(f"❌ Error discovering tools: {e}")
+            print(f"❌ Error during async tool discovery: {e}")
+            logger.error("Exception during tool discovery", exc_info=True) # Log traceback
             return []
-        
+                    
     @traceable
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any], timeout=60):
-        """Calls a tool in the MCP container with logging and error handling."""
+        """Calls a tool in the MCP container with improved logging and error reporting.""" # Updated docstring
         logger.info(f"🔍 Attempting to call tool: {tool_name}")
-        logger.info(f"📦 Arguments: {arguments}")
+        # Avoid logging potentially large arguments by default, maybe log keys or type
+        if isinstance(arguments, dict):
+            logger.info(f"📦 Argument Keys: {list(arguments.keys())}")
+        else:
+            logger.info(f"📦 Arguments Type: {type(arguments)}")
 
+
+        # --- Network inspection part remains the same ---
         try:
-            # Async network inspection
-            process = await asyncio.create_subprocess_exec(
+            net_process = await asyncio.create_subprocess_exec(
                 "docker", "network", "inspect", "bridge",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE
             )
-            stdout, stderr = await process.communicate()
-            logger.info(f"🌐 Network Details: {stdout.decode()}")
+            net_stdout, net_stderr = await net_process.communicate()
+            if net_process.returncode == 0:
+                 logger.info(f"🌐 Network Details: {net_stdout.decode()[:500]}...") # Log truncated details
+            else:
+                 logger.warning(f"⚠️ Network inspection failed with code {net_process.returncode}: {net_stderr.decode()}")
         except Exception as e:
-            logger.error(f"❌ Network inspection failed: {e}")
+            logger.error(f"❌ Network inspection exception: {e}")
+        # --- End network inspection ---
+
 
         command = ["docker", "exec", "-i", self.container_name] + self.command
 
         try:
             normalized_args = arguments
-
+            # Specific arg normalization remains
             if tool_name == "create_or_update_file" and isinstance(normalized_args, dict) and "sha" in normalized_args and normalized_args["sha"] is None:
                 del normalized_args["sha"]
 
@@ -238,12 +309,11 @@ class MCPToolDiscovery:
                 "jsonrpc": "2.0",
                 "method": self.call_method,
                 "params": {"name": tool_name, "arguments": normalized_args},
-                "id": "2",
+                "id": "2", # Consider unique IDs if parallel calls happen
             }
 
-            logger.info(f"🚀 Full Payload: {json.dumps(payload)}")
+            logger.info(f"🚀 Sending Payload for {tool_name}") # Don't log full payload by default if args are large
 
-            # Create async subprocess
             process = await asyncio.create_subprocess_exec(
                 *command,
                 stdin=asyncio.subprocess.PIPE,
@@ -253,56 +323,86 @@ class MCPToolDiscovery:
             )
 
             try:
-                # Use asyncio.wait_for to add a timeout
                 stdout, stderr = await asyncio.wait_for(
                     process.communicate(input=json.dumps(payload).encode() + b"\n"),
                     timeout=timeout
                 )
 
-                logger.info(f"🔬 Subprocess Exit Code: {process.returncode}")
-                logger.info(f"🔬 Full subprocess stdout: {stdout.decode()}")
-                logger.info(f"🔬 Full subprocess stderr: {stderr.decode()}")
+                stdout_decoded = stdout.decode().strip()
+                stderr_decoded = stderr.decode().strip()
+
+                logger.info(f"🔬 Subprocess Exit Code for {tool_name}: {process.returncode}")
+                logger.info(f"🔬 Full subprocess stdout for {tool_name}: {stdout_decoded}")
+                if stderr_decoded:
+                    logger.info(f"🔬 Full subprocess stderr for {tool_name}: {stderr_decoded}")
+
 
                 if process.returncode != 0:
-                    logger.error(f"❌ Subprocess returned non-zero exit code: {process.returncode}")
-                    logger.error(f"🚨 Error Details: {stderr.decode()}")
-                    return f"Subprocess Error: {stderr.decode()}"
+                    error_detail = stderr_decoded or stdout_decoded or f"Tool {tool_name} exited with code {process.returncode}"
+                    logger.error(f"❌ Subprocess for {tool_name} returned non-zero exit code: {process.returncode}")
+                    logger.error(f"🚨 Error Details: {error_detail}")
+                    # Return a clear error string indicating subprocess failure
+                    return f"Subprocess Error: {error_detail}"
 
-                output_lines = stdout.decode().strip().split("\n")
+                # Find the last valid JSON line in stdout
+                output_lines = stdout_decoded.split("\n")
+                last_json_line = None
                 for line in reversed(output_lines):
+                     line = line.strip()
+                     if line.startswith("{") or line.startswith("["):
+                          last_json_line = line
+                          break # Found the likely JSON response
+
+                if last_json_line:
                     try:
-                        response = json.loads(line)
-                        logger.info(f"✅ Parsed JSON response: {response}")
+                        response = json.loads(last_json_line)
+                        logger.info(f"✅ Parsed JSON response for {tool_name}: {response}")
 
-                        if "result" in response:
+                        # *** MODIFICATION START ***
+                        if "error" in response:
+                            # Extract specific error message/data from JSON
+                            error_content = response["error"]
+                            logger.error(f"🚨 Tool '{tool_name}' reported error: {error_content}")
+                            # Return a string clearly indicating a tool error, including the specific content
+                            # Convert dict/list errors to string for ToolMessage compatibility
+                            if isinstance(error_content, (dict, list)):
+                                 error_content_str = json.dumps(error_content)
+                            else:
+                                 error_content_str = str(error_content)
+                            return f"Tool Error: {error_content_str}"
+                        elif "result" in response:
+                            # Success case
                             return response["result"]
-                        elif "error" in response:
-                            error_message = response["error"]
-                            if "tool not found" in str(error_message).lower():
-                                logger.error(f"🚨 Tool '{tool_name}' not found by service.")
-                                return f"Tool Error: Tool '{error_message}"
                         else:
-                            logger.warning("⚠️ Unexpected response structure")
-                            return response
-                    except json.JSONDecodeError:
-                        continue
+                            # Valid JSON but unexpected structure
+                             logger.warning(f"⚠️ Unexpected JSON structure from {tool_name}: {response}")
+                             # Return the raw dict for now, might need adjustment
+                             return response
+                         # *** MODIFICATION END ***
 
-                logger.error("❌ No valid JSON response found")
-                return "Error: No valid JSON response"
+                    except json.JSONDecodeError:
+                        logger.error(f"❌ Failed to decode JSON from suspected line: {last_json_line}")
+                        # Fall through to the generic error below if JSON parsing fails
+
+                # If no valid JSON line found after successful exit
+                logger.error(f"❌ No valid JSON response found in stdout for {tool_name}, though process exited cleanly.")
+                # Return the raw stdout or a specific error message
+                return f"Error: No valid JSON found in tool output. Raw stdout: {stdout_decoded}"
+
 
             except asyncio.TimeoutError:
-                # Handle timeout gracefully
                 logger.error(f"⏱️ Tool call to {tool_name} timed out after {timeout} seconds")
                 try:
-                    process.kill()  # Kill the subprocess
+                    process.kill()
                 except:
                     pass
                 return f"Error: Tool call to {tool_name} timed out after {timeout} seconds"
 
-        except Exception:
-            logger.critical(f"🔥 Critical tool call error", exc_info=True) 
-            return "Critical Error: tool call failure"
-    
+        except Exception as e:
+             # Catch broader errors during subprocess setup/execution
+             logger.critical(f"🔥 Critical error calling tool {tool_name}", exc_info=True)
+             return f"Critical Framework Error: {e}"
+            
 @traceable
 async def get_tools_for_service(service_name, command, discovery_method, call_method, service_discoveries):
     """Enhanced tool discovery for each service."""
@@ -381,6 +481,7 @@ async def load_all_tools():
         ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
         ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
         ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
+        ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
     ]
 
     try:
@@ -470,67 +571,115 @@ class ContextAwareToolNode(ToolNode):
         self, state: GraphState, config: Optional[RunnableConfig] = None, **kwargs: Any
     ):
         """
-        Executes the tool call specified in the last AIMessage and updates the state.
-
-        Args:
-            state: The current graph state.
-            config: Optional config object.
-            **kwargs: Additional arguments for the invocation.
-
-        Returns:
-            The updated graph state.
-
-        Raises:
-            ValueError: If the last message is not an AIMessage with tool calls.
-        """
+        Executes the tool call specified in the last AIMessage, updates the state,
+        and correctly formats the ToolMessage content for both success and error.
+        """ # Updated docstring
         messages = state["messages"]
         last_message = messages[-1]
 
         if not isinstance(last_message, AIMessage) or not last_message.tool_calls:
-            raise ValueError("Expected an AIMessage with tool_calls")
+            raise ValueError("Expected an AIMessage with tool_calls in the last message.")
 
         tool_calls = last_message.tool_calls
         context = state.get("context", {})
+        new_tool_messages = [] # Store new messages separately
 
         for tool_call in tool_calls:
             tool_name = tool_call['name']
+            tool_call_id = tool_call['id'] # Get tool_call_id
 
             if not (tool := self.tools_by_name.get(tool_name)):
                 logger.warning(
-                    f"Tool '{tool_name}' not found in the available tools. Skipping this tool call."
+                    f"Tool '{tool_name}' requested by LLM not found in available tools. Skipping."
                 )
+                # Add a ToolMessage indicating the tool wasn't found
+                new_tool_messages.append(ToolMessage(
+                    tool_call_id=tool_call_id,
+                    content=f"Error: Tool '{tool_name}' is not available.",
+                    name=tool_name,
+                ))
                 continue
 
             tool_input = tool_call['args']
-            filtered_tool_input = {k: v for k, v in tool_input.items() if v is not None}
-            logger.debug(f"Calling tool: {tool.name} with args: {filtered_tool_input}")
+            # Ensure tool_input is a dictionary before filtering Nones
+            if not isinstance(tool_input, dict):
+                 logger.warning(f"Tool input for {tool_name} is not a dict: {tool_input}. Using as is or converting.")
+                 # Attempt to handle non-dict input if necessary, or pass as is if tool expects non-dict
+                 # For most structured tools, this indicates an LLM error
+                 # Passing the raw input might cause downstream Pydantic errors in the tool wrapper
+                 filtered_tool_input = tool_input # Or handle differently based on tool type
+            else:
+                 filtered_tool_input = {k: v for k, v in tool_input.items() if v is not None}
 
-            tool_response = await tool.ainvoke(filtered_tool_input)
+            logger.debug(f"Calling tool: {tool.name} with filtered args: {filtered_tool_input}")
 
-            if not isinstance(tool_response, dict):
-                tool_response = {tool_name: tool_response}
+            try:
+                 # Invoke the tool (which now calls MCPToolDiscovery.call_tool)
+                 tool_response = await tool.ainvoke(filtered_tool_input, config=config) # Pass config
+                 logger.info(f"Received response from tool {tool_name}: {type(tool_response)}")
 
-            used = set(context.get("used_tools", []))
-            used.add(tool.name)
-            context["used_tools"] = list(used)
+                 # *** MODIFICATION START ***
+                 tool_content_str = ""
+                 is_error = False
 
-            # Update the context with the tool's output
-            context.update(tool_response)
+                 if isinstance(tool_response, str) and (
+                      tool_response.startswith("Error:") or
+                      tool_response.startswith("Tool Error:") or
+                      tool_response.startswith("Subprocess Error:") or
+                      tool_response.startswith("Critical Framework Error:")
+                 ):
+                      # Handle specific error strings returned by call_tool
+                      tool_content_str = tool_response
+                      is_error = True
+                      logger.error(f"Error reported by tool {tool_name}: {tool_content_str}")
+                 elif isinstance(tool_response, (dict, list)):
+                      # Handle successful JSON dict/list response
+                      try:
+                           # Attempt to dump complex structures cleanly
+                           tool_content_str = json.dumps(tool_response)
+                           # Update context only on success? Or always update? Let's update always for now.
+                           context.update({tool_name: tool_response}) # Store structured result in context
+                      except TypeError as e:
+                           logger.warning(f"Could not JSON serialize tool response for {tool_name}: {e}. Using str().")
+                           tool_content_str = str(tool_response)
+                           context.update({tool_name: tool_content_str}) # Store string representation
+                 else:
+                      # Handle other types (simple strings, numbers, etc.)
+                      tool_content_str = str(tool_response)
+                      context.update({tool_name: tool_response}) # Store raw result
 
-            # Create a ToolMessage and add it to the message history
+                 # Create ToolMessage with the determined content string
+                 tool_message = ToolMessage(
+                      tool_call_id=tool_call_id,
+                      content=tool_content_str,
+                      name=tool_name,
+                 )
+                 # *** MODIFICATION END ***
 
-            tool_message = ToolMessage(
-                tool_call_id=tool_call['id'],
-                content=tool_response.get("content", str(tool_response)),
-                name=tool_call['name'],
-            )
+                 new_tool_messages.append(tool_message)
 
-            messages.append(tool_message)
+                 # Update used tools list
+                 used = set(context.get("used_tools", []))
+                 used.add(tool.name)
+                 context["used_tools"] = list(used)
 
+            except Exception as tool_exec_e:
+                # Catch errors during the tool.ainvoke call itself (e.g., Pydantic validation within the wrapper)
+                logger.error(f"Exception during tool.ainvoke for {tool_name}", exc_info=True)
+                new_tool_messages.append(ToolMessage(
+                     tool_call_id=tool_call_id,
+                     content=f"Framework Error invoking tool {tool_name}: {tool_exec_e}",
+                     name=tool_name,
+                ))
+
+        # Append all new messages at once
+        messages.extend(new_tool_messages)
+
+        # Decide the next step - always go back to handler which then goes to assistant
         return {
             "messages": messages,
             "context": context,
-            "__next__": "handle_tool_results"
+            # "__next__": "handle_tool_results" # This seems to be set by the graph edge already
         }
     
 @traceable
@@ -639,7 +788,7 @@ AVAILABLE TOOL CATEGORIES:
 GENERAL RULES:
 1. THINK step-by-step about what the user wants.
 2. MATCH tools to the *exact* user intent.
-3. DO NOT guess. Only use tools when the user explicitly requests an action that matches the tool’s purpose.
+3. DO NOT guess. Only use tools when the user explicitly requests an action that matches the tools purpose.
 4. NEVER call a tool without all required parameters.
 5. NEVER call a tool just because the output of another tool suggests a next step — unless the user explicitly asked for that.
 
@@ -696,6 +845,39 @@ GENERAL RULES:
 - Clearly state *why* you are using the external ChatGPT tool (e.g., "To get a detailed security analysis from ChatGPT...").
 - Do NOT use this tool for tasks you are expected to perform directly based on your core instructions or other available tools (like running a show command or saving a file). Differentiate between *your* analysis/response and the output requested *from* the external ChatGPT tool.
 
+📊 VEGALITE VISUALIZATION TOOLS (Requires 2 Steps: Save then Visualize):
+- Use these tools to create PNG charts from structured data (like parsed command output) using the Vega-Lite standard.
+
+1.  **vegalite_save_data**
+    - **Purpose**: Stores structured data under a unique name so it can be visualized later. This MUST be called *before* vegalite_visualize_data.
+    - **Parameters**:
+        - name (string): A unique identifier for this dataset (e.g., R1_interface_stats, packet_comparison). Choose a descriptive name.
+        - data (List[Dict]): The actual structured data rows, formatted as a list of dictionaries. **CRITICAL: Ensure this data argument contains the *actual, non-empty* data extracted from previous steps (like pyATS output). Do NOT pass empty lists or lists of empty dictionaries.**
+    - **Returns**: Confirmation that the data was saved successfully.
+
+2.  **vegalite_visualize_data**
+    - **Purpose**: Generates a PNG image visualization from data previously saved using vegalite_save_data. It uses a provided Vega-Lite JSON specification *template* and saves the resulting PNG to the /output directory.
+    - **Parameters**:
+        - data_name (string): The *exact* unique name that was used when calling vegalite_save_data.
+        - vegalite_specification (string): A valid Vega-Lite v5 JSON specification string that defines the desired chart (marks, encodings, axes, etc.). **CRITICAL: This JSON string MUST NOT include the top-level data key.** The tool automatically loads the data referenced by data_name and injects it. The encodings within the spec (e.g., field, packets) must refer to keys present in the saved data.
+    - **Returns**: Confirmation message including the container path where the PNG file was saved (e.g., /output/R1_interface_stats.png).
+
+📈 QUICKCHART TOOLS (Generates Standard Chart Images/URLs):
+- Use these tools for creating common chart types (bar, line, pie, etc.) using the QuickChart.io service. This requires constructing a valid Chart.js configuration object.
+
+1.  **generate_chart**
+    - **Purpose**: Creates a chart image hosted by QuickChart.io and returns a publicly accessible URL to that image. Use this when the user primarily needs a *link* to the visualization.
+    - **Parameters**:
+        - chart_config (dict or JSON string): A complete configuration object following the **Chart.js structure**. This object must define the chart type (e.g., bar, line, pie), the data (including labels and datasets with their values), and any desired options. Refer to Chart.js documentation for details on structuring this object. **CRITICAL: You must construct the full, valid Chart.js configuration based on the users request and available data.**
+    - **Returns**: A string containing the URL pointing to the generated chart image.
+
+2.  **download_chart**
+    - **Purpose**: Creates a chart image using QuickChart.io and saves it directly as an image file (e.g., PNG) to the /output directory on the server. Use this when the user explicitly asks to **save the chart as a file**.
+    - **Parameters**:
+        - chart_config (dict or JSON string): The *same* complete Chart.js configuration object structure required by generate_chart. It defines the chart type, data, and options. **CRITICAL: You must construct the full, valid Chart.js configuration.**
+        - file_path (string): The desired filename for the output image within the /output directory (e.g., interface_pie_chart.png, device_load.png). The tool automatically saves to the /output path.
+    - **Returns**: Confirmation message including the container path where the chart image file was saved (e.g., /output/interface_pie_chart.png).
+    
 🎯 TOOL CHAINING:
 - Do NOT chain tools together unless the user clearly describes multiple steps.
   - Example: “Save the config to GitHub and notify Slack” → You may use two tools.

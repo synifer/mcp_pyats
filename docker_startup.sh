@@ -44,11 +44,6 @@ docker build -t filesystem-mcp ./filesystem
 if [ $? -ne 0 ]; then echo "Error building filesystem-mcp image."; exit 1; fi
 echo "filesystem-mcp image built successfully."
 
-echo "Building streamlit-app image..."
-docker build -t streamlit-app ./streamlit
-if [ $? -ne 0 ]; then echo "Error building streamlit-app image."; exit 1; fi
-echo "streamlit-app image built successfully."
-
 echo "Building netbox-mcp image..."
 docker build -t netbox-mcp ./netbox
 if [ $? -ne 0 ]; then echo "Error building netbox-mcp image."; exit 1; fi
@@ -82,7 +77,16 @@ echo "chatgpt-mcp image built successfully."
 echo "Building quickchart-mcp image..."
 docker build -t quickchart-mcp ./quickchart
 if [ $? -ne 0 ]; then echo "Error building quickchart-mcp image."; exit 1; fi
-echo "quickchart-app image built successfully."
+echo "quickchart-mcp image built successfully."
+
+echo "Building vegalite-mcp image..."
+docker build -t vegalite-mcp ./vegalite
+echo "vegalite-mcp image built successfully"
+
+echo "Building streamlit-app image..."
+docker build -t streamlit-app ./streamlit
+if [ $? -ne 0 ]; then echo "Error building streamlit-app image."; exit 1; fi
+echo "streamlit-app image built successfully."
 
 echo "Building langgraph container (mcpyats)..."
 docker build -t mcpyats -f ./mcpyats/Dockerfile ./mcpyats
@@ -110,10 +114,6 @@ echo "sequentialthinking-mcp container started."
 echo "Starting slack-mcp container..."
 docker run -dit --name slack-mcp -e SLACK_BOT_TOKEN="${SLACK_BOT_TOKEN:-YOUR_SLACK_BOT_TOKEN}" -e SLACK_TEAM_ID="${SLACK_TEAM_ID:-YOUR_SLACK_TEAM_ID}" slack-mcp
 echo "slack-mcp container started."
-
-echo "Starting selector-mcp container..."
-docker run -d --name selector-mcp -e SELECTOR_URL="${SELECTOR_URL:-YOUR_SELECTOR_URL}" -e SELECTOR_AI_API_KEY="${SELECTOR_AI_API_KEY:-YOUR_SELECTOR_AI_API_KEY}" selector-mcp python3 mcp_server.py --restart unless-stopped
-echo "selector-mcp container started."
 
 echo "Starting excalidraw-mcp container..."
 docker run -dit --name excalidraw-mcp excalidraw-mcp
@@ -159,11 +159,19 @@ echo "Starting quickchart-mcp container..."
 docker run -dit --name quickchart-mcp quickchart-mcp
 echo "quickchart-mcp container started."
 
+echo "Starting vegalite-mcp container..."
+docker run -dit --name vegalite-mcp \
+  -v "/home/johncapobianco/MCPyATS:/output" \
+  vegalite-mcp
+echo "pyats-mcp container started."
+
 # # Check if last MCP containers are running
-if ! docker ps | grep -q "quickchart-mcp"; then
-    echo "quickchart-mcp container not found."
+if ! docker ps | grep -q "vegalite-mcp"; then
+    echo "vegalite-mcp container not found."
     exit 1
 fi
+
+sleep 2
 
 echo "Starting mcpyats container..."
 docker run -p 2024:2024 -dit \
