@@ -9,7 +9,7 @@ import subprocess
 from functools import wraps
 from dotenv import load_dotenv
 from langsmith import traceable
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from typing_extensions import TypedDict
 from langchain_core.documents import Document
 from langchain_core.messages import ToolMessage, BaseMessage
@@ -418,50 +418,92 @@ async def get_tools_for_service(service_name, command, discovery_method, call_me
     tools = []
     try:
         discovered_tools = await discovery.discover_tools()
-        print(f"🛠️ Tools for {service_name}: {[t['name'] for t in discovered_tools]}")
+        print(f"🛠️ Tools for {service_name}: {[t.get('name', 'Unnamed') for t in discovered_tools]}")
 
-        for tool in discovered_tools:
-            tool_name = tool["name"]
-            tool_description = tool.get("description", "")
-            tool_schema = tool.get("inputSchema") or tool.get("parameters", {})
+        for tool_info in discovered_tools: # Renamed 'tool' to 'tool_info' to avoid clash
+            tool_name = tool_info["name"]
+            tool_description = tool_info.get("description", "")
+            # Handle potential variations in schema key name
+            tool_schema = tool_info.get("inputSchema") or tool_info.get("parameters", {})
 
-            if tool_schema and tool_schema.get("type") == "object":
+            if tool_schema and isinstance(tool_schema, dict) and tool_schema.get("type") == "object":
                 try:
+                    # Dynamically create the Pydantic model for input validation
                     input_model = schema_to_pydantic_model(tool_name + "_Input", tool_schema)
 
-                    async def tool_call_wrapper(**kwargs):
-                        validated_args = input_model(**kwargs).dict()
-                        return await service_discoveries[service_name].call_tool(tool_name, validated_args, timeout=120)
+                    # *** MODIFICATION START ***
+                    # Define an async wrapper function that filters None before validation
+                    async def tool_call_async_wrapper(captured_service_name=service_name, captured_tool_name=tool_name, captured_input_model=input_model, **kwargs):
+                        # Filter out arguments where the value is None
+                        # This allows Pydantic defaults to apply correctly for missing keys
+                        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
+                        logger.debug(f"Original kwargs for {captured_tool_name}: {kwargs}")
+                        logger.debug(f"Filtered kwargs for {captured_tool_name}: {filtered_kwargs}")
 
+                        try:
+                            # Validate arguments using the Pydantic model with filtered input
+                            validated_args = captured_input_model(**filtered_kwargs).dict()
+                            # Call the actual tool execution logic (which runs in a subprocess)
+                            return await service_discoveries[captured_service_name].call_tool(captured_tool_name, validated_args, timeout=120) # Increased default timeout
+                        except ValidationError as e:
+                            # If validation fails even after filtering (e.g., missing required field)
+                            logger.error(f"Pydantic validation failed for {captured_tool_name}: {e}")
+                            # Return an error string compatible with ToolMessage content handling
+                            return f"Tool Input Validation Error: {e}"
+                        except Exception as e:
+                            # Catch other unexpected errors during validation or the call setup
+                            logger.error(f"Unexpected error in tool wrapper for {captured_tool_name}: {e}", exc_info=True)
+                            return f"Tool Wrapper Error: {e}"
+
+                    # Create the StructuredTool, passing the async wrapper directly
                     structured_tool = StructuredTool.from_function(
                         name=tool_name,
                         description=tool_description,
                         args_schema=input_model,
-                        func=(lambda tool_name=tool_name, input_model=input_model:
-                            lambda **kwargs: asyncio.run(
-                                service_discoveries[service_name].call_tool(tool_name, input_model(**kwargs).dict())
-                            ))()
+                        coroutine=tool_call_async_wrapper # Use the coroutine parameter
+                        # func= THIS IS NOT NEEDED WHEN USING coroutine=
                     )
+                    # *** MODIFICATION END ***
 
                     tools.append(structured_tool)
-                except Exception as e:
-                    logger.warning(f"⚠️ Failed to build structured tool {tool_name}: {e}")
-            else:
-                async def fallback_tool_call_wrapper(x):
-                    return await service_discoveries[service_name].call_tool(tool_name, {"__arg1": x})
+                    logger.info(f"✅ Created StructuredTool: {tool_name}")
 
-                fallback_tool = Tool(
-                    name=tool_name,
-                    description=tool_description,
-                    func=lambda x: asyncio.run(fallback_tool_call_wrapper(x))
-                )
-                tools.append(fallback_tool)
+                except Exception as e:
+                    # Catch errors during Pydantic model creation or StructuredTool setup
+                    logger.warning(f"⚠️ Failed to build structured tool {tool_name}: {e}", exc_info=True)
+                    # Optionally add a fallback simple tool here if needed
+            else:
+                 # --- Fallback logic for non-structured tools ---
+                 # Ensure this part is compatible with your async setup if you use it.
+                 # The asyncio.run call here can be problematic if the main loop is async.
+                 logger.warning(f"⚠️ Tool '{tool_name}' has no valid object schema. Creating basic Tool.")
+
+                 async def fallback_tool_call_wrapper(arg_input, captured_service_name=service_name, captured_tool_name=tool_name):
+                     # Basic tools often expect a single string or a simple dict.
+                     # Adjust the dict structure if needed based on how your basic tools work.
+                     tool_args = {"input": arg_input} if isinstance(arg_input, str) else arg_input
+                     if not isinstance(tool_args, dict): # Ensure it's a dict for call_tool
+                         tool_args = {"input": str(tool_args)}
+                     return await service_discoveries[captured_service_name].call_tool(captured_tool_name, tool_args)
+
+                 # If your main application runs with asyncio.run(run_cli_interaction()),
+                 # you should await the async function directly instead of using asyncio.run inside the lambda.
+                 # However, Langchain's Tool expects a sync func. A common workaround is needed if the main loop is async.
+                 # For now, assuming the asyncio.run might be acceptable in your specific context or needs adjustment later.
+                 fallback_tool = Tool(
+                     name=tool_name,
+                     description=tool_description + " (Note: Accepts simplified input)",
+                     # This lambda calls an async function using asyncio.run - check compatibility!
+                     func=lambda x, tn=tool_name: asyncio.run(fallback_tool_call_wrapper(x, captured_tool_name=tn))
+                     # Consider if a synchronous wrapper or adapter is needed here depending on main event loop.
+                 )
+                 tools.append(fallback_tool)
+
 
     except Exception as e:
         logger.error(f"❌ Tool discovery error in {service_name}: {e}", exc_info=True)
 
     return tools
-
 @traceable
 async def load_all_tools():
     """Async function to load tools from different MCP services and local files."""
@@ -483,7 +525,8 @@ async def load_all_tools():
         ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
         ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
         ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),        
+        ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),    
+        ("nist-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
     ]
 
     try:
@@ -824,6 +867,8 @@ GENERAL RULES:
 - Use `create_drawing`, `update_drawing`, `export_to_json` only when the user wants a network diagram or visual model.
 - Do NOT export a drawing unless the user explicitly says so.
 
+
+
 🧜 MERMAID DIAGRAM TOOLS:
 - Use `mermaid_generate` ONLY when the user asks to create a PNG image from **Mermaid diagram code**.
   - **Purpose**: Converts Mermaid diagram code text into a PNG image file.
@@ -892,7 +937,35 @@ GENERAL RULES:
         - chart_config (dict or JSON string): The *same* complete Chart.js configuration object structure required by generate_chart. It defines the chart type, data, and options. **CRITICAL: You must construct the full, valid Chart.js configuration.**
         - file_path (string): The desired filename for the output image within the /output directory (e.g., interface_pie_chart.png, device_load.png). The tool automatically saves to the /output path.
     - **Returns**: Confirmation message including the container path where the chart image file was saved (e.g., /output/interface_pie_chart.png).
-    
+
+📜 RFC DOCUMENT TOOLS:
+- Use `get_rfc`, `search_rfcs`, or `get_rfc_section` ONLY when the user explicitly asks to find, retrieve, or examine Request for Comments (RFC) documents.
+- **Trigger Examples**:
+    - Search for RFCs about HTTP/3 → `search_rfcs`
+    - Get RFC 8446 or Show me the document for RFC 8446 → `get_rfc`
+    - What's the metadata for RFC 2616?" → `get_rfc` with `format=metadata`
+    - Find section 4.2 in RFC 791 or Get the 'Security Considerations' section of RFC 3550 → `get_rfc_section`
+- **Constraints**:
+    - Requires the specific RFC `number` for `get_rfc` and `get_rfc_section`.
+    - Requires a `query` string for `search_rfcs`.
+    - For `get_rfc_section`, requires a `section` identifier (title or number).
+    - Do NOT use these tools for general web searches, code lookup, configuration files, or non-RFC standards documents. ONLY use for retrieving information directly related to official RFCs.
+
+🛡️ NIST CVE VULNERABILITY TOOLS:
+- Use `get_cve` or `search_cve` ONLY when the user explicitly asks to find or retrieve information about Common Vulnerabilities and Exposures (CVEs) from the NIST National Vulnerability Database (NVD).
+- **Trigger Examples**:
+    - Get details for CVE-2021-44228 or Tell me about the Log4Shell vulnerability CVE-2021-44228 → `get_cve` with `cve_id=CVE-2021-44228`
+    - Search the NVD for vulnerabilities related to Apache Struts → `search_cve` with `keyword="Apache Struts"`
+    - Find CVEs mentioning 'Microsoft Exchange Server' exactly → `search_cve` with `keyword="Microsoft Exchange Server"` and `exact_match=True`
+    - Give me a concise summary of CVE-2019-1010218 → `get_cve` with `cve_id="CVE-2019-1010218"` and `concise=True`
+    - Show me the latest 5 vulnerabilities for 'Cisco IOS XE' → `search_cve` with `keyword=Cisco IOS XE` and `results=5`
+- **Constraints**:
+    - Requires a valid CVE ID (e.g., `CVE-YYYY-NNNNN`) for `get_cve`.
+    - Requires a `keyword` string for `search_cve`.
+    - Use the `concise` parameter only if the user asks for summary information.
+    - Use the `exact_match` parameter for `search_cve` only if the user specifies needing an exact phrase match.
+    - Do NOT use these tools for general security advice, threat hunting outside of NVD, retrieving non-CVE vulnerability info, or fetching software patches. They are ONLY for interacting with the NIST NVD CVE database.
+
 🎯 TOOL CHAINING:
 - Do NOT chain tools together unless the user clearly describes multiple steps.
   - Example: “Save the config to GitHub and notify Slack” → You may use two tools.

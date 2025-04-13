@@ -33,5 +33,5 @@ COPY . .
 # Set PYTHONPATH if needed (optional now that you're in /app)
 ENV PYTHONPATH=/app
 
-# Run your standalone tool-based server (no MCP!)
+# Run your standalone tool-based server 
 CMD ["python", "-u", "server.py"]
