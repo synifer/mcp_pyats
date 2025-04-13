@@ -87,6 +87,10 @@ echo "Building mermaid-mcp image..."
 docker build -t mermaid-mcp ./mermaid
 echo "mermaid-mcp image built successfully"
 
+echo "Building rfc-mcp image..."
+docker build -t rfc-mcp ./rfc
+echo "rfc-mcp image built successfully"
+
 echo "Building streamlit-app image..."
 docker build -t streamlit-app ./streamlit
 if [ $? -ne 0 ]; then echo "Error building streamlit-app image."; exit 1; fi
@@ -176,10 +180,13 @@ docker run -dit --name mermaid-mcp \
   mermaid-mcp
 echo "mermaid-mcp container started."
 
+echo "Starting rfc-mcp container..."
+docker run -dit --name rfc-mcp rfc-mcp
+echo "rfc-mcp container started."
 
 # # Check if last MCP containers are running
-if ! docker ps | grep -q "mermaid-mcp"; then
-    echo "mermaid-mcp container not found."
+if ! docker ps | grep -q "rfc-mcp"; then
+    echo "rfc-mcp container not found."
     exit 1
 fi
 

@@ -483,6 +483,7 @@ async def load_all_tools():
         ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
         ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
         ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),        
     ]
 
     try:
