@@ -482,6 +482,7 @@ async def load_all_tools():
         ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
         ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
         ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
     ]
 
     try:
@@ -822,6 +823,19 @@ GENERAL RULES:
 - Use `create_drawing`, `update_drawing`, `export_to_json` only when the user wants a network diagram or visual model.
 - Do NOT export a drawing unless the user explicitly says so.
 
+🧜 MERMAID DIAGRAM TOOLS:
+- Use `mermaid_generate` ONLY when the user asks to create a PNG image from **Mermaid diagram code**.
+  - **Purpose**: Converts Mermaid diagram code text into a PNG image file.
+  - **Parameters:**
+    - `code` (string): The Mermaid diagram code to render (required).
+    - `theme` (string, optional): Theme for the diagram. Options: default, forest, dark, neutral. Defaults to default.
+    - `backgroundColor` (string, optional): Background color for the generated PNG, e.g., white, transparent, #F0F0F0. Defaults to transparent or theme-based.
+    - `name` (string): The filename for the generated PNG image (e.g., network_topology.png). **Required only if the tools environment is configured to save files to disk (CONTENT_IMAGE_SUPPORTED=false).**
+    - `folder` (string): The absolute path *inside the container* where the image should be saved (e.g., /output). **Required only if the tools environment is configured to save files to disk (CONTENT_IMAGE_SUPPORTED=false).**
+  - **Behavior Note:** This tools behavior depends on the `CONTENT_IMAGE_SUPPORTED` environment variable of the running container.
+    - If `true` (default): The PNG image data is returned directly in the API response. `name` and `folder` parameters are ignored.
+    - If `false`: The PNG image is saved to the specified `folder` with the specified `name`. The API response will contain the path to the saved file (e.g., /output/network_topology.png). `name` and `folder` parameters are **mandatory** in this mode.
+    
 🛠️ SERVICE NOW TOOLS:
 - ONLY use ServiceNow tools if the user explicitly says things like:
   - “Create a problem ticket in ServiceNow”
@@ -840,7 +854,7 @@ GENERAL RULES:
 
 🤖 CHATGPT ANALYSIS TOOLS:
 - Use the `ask_chatgpt` tool ONLY when the user explicitly asks you to leverage an external ChatGPT model for specific analysis, summarization, comparison, or generation tasks that go beyond your primary function or require a separate perspective.
-- Examples: "Analyze this Cisco config for security best practices using ChatGPT", "Ask ChatGPT to summarize this document", "Get ChatGPT's explanation for this routing behavior".
+- Examples: "Analyze this Cisco config for security best practices using ChatGPT", "Ask ChatGPT to summarize this document", "Get ChatGPTs explanation for this routing behavior".
 - Required: The `content` (e.g., configuration text, document snippet, specific question) that needs to be sent to the external ChatGPT tool.
 - Clearly state *why* you are using the external ChatGPT tool (e.g., "To get a detailed security analysis from ChatGPT...").
 - Do NOT use this tool for tasks you are expected to perform directly based on your core instructions or other available tools (like running a show command or saving a file). Differentiate between *your* analysis/response and the output requested *from* the external ChatGPT tool.
@@ -885,7 +899,7 @@ GENERAL RULES:
 
 🧠 BEFORE YOU ACT:
 - Pause and explain your thought process.
-- Say WHY the tool you're selecting is the best fit.
+- Say WHY the tool youre selecting is the best fit.
 - If unsure, respond with a clarification question instead of calling a tool.
 
 """

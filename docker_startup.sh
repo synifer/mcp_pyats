@@ -83,6 +83,10 @@ echo "Building vegalite-mcp image..."
 docker build -t vegalite-mcp ./vegalite
 echo "vegalite-mcp image built successfully"
 
+echo "Building mermaid-mcp image..."
+docker build -t mermaid-mcp ./mermaid
+echo "mermaid-mcp image built successfully"
+
 echo "Building streamlit-app image..."
 docker build -t streamlit-app ./streamlit
 if [ $? -ne 0 ]; then echo "Error building streamlit-app image."; exit 1; fi
@@ -163,11 +167,19 @@ echo "Starting vegalite-mcp container..."
 docker run -dit --name vegalite-mcp \
   -v "/home/johncapobianco/MCPyATS:/output" \
   vegalite-mcp
-echo "pyats-mcp container started."
+echo "vegalite-mcp container started."
+
+echo "Starting mermaid-mcp container..."
+docker run -dit --name mermaid-mcp \
+  -v "/home/johncapobianco/MCPyATS:/output" \
+  -e CONTENT_IMAGE_SUPPORTED=false \
+  mermaid-mcp
+echo "mermaid-mcp container started."
+
 
 # # Check if last MCP containers are running
-if ! docker ps | grep -q "vegalite-mcp"; then
-    echo "vegalite-mcp container not found."
+if ! docker ps | grep -q "mermaid-mcp"; then
+    echo "mermaid-mcp container not found."
     exit 1
 fi
 
