@@ -600,40 +600,46 @@ document_ids = vector_store.add_documents(tool_documents)
 print("🔧 All bound tools:", [t.name for t in valid_tools])
 
 
-AGENT_CARD_OUTPUT_DIR = "/a2a/.well-known"
+AGENT_CARD_OUTPUT_DIR = os.getenv("AGENT_CARD_OUTPUT_DIR", "/a2a/.well-known")
 AGENT_CARD_PATH = os.path.join(AGENT_CARD_OUTPUT_DIR, "agent.json")
 
-AGENT_NAME = os.getenv("A2A_AGENT_NAME", "Cisco pyATS Agent Enhanced with Model Context Protocol")
-AGENT_DESCRIPTION = os.getenv("A2A_AGENT_DESCRIPTION", "LangGraph-based MCP agent for Cisco pyATS and other tools with a focus on network automation for the Cisco DevNet Cisco Modeling Labs Sandbox")
+# Environment variables or defaults
+AGENT_NAME = os.getenv("A2A_AGENT_NAME", "Selector Plus Agent Enhanced with Model Context Protocol Toolkit")
+AGENT_DESCRIPTION = os.getenv("A2A_AGENT_DESCRIPTION", "LangGraph-based MCP agent for Selector AI and other MCPs.")
 AGENT_HOST = os.getenv("A2A_AGENT_HOST", "localhost")
 AGENT_PORT = os.getenv("A2A_AGENT_PORT", "10000")
 
 AGENT_URL = f"http://{AGENT_HOST}:{AGENT_PORT}"
 
+# ✅ Use standards-compliant fields
 agent_card = {
     "name": AGENT_NAME,
     "description": AGENT_DESCRIPTION,
     "version": "1.0",
     "url": AGENT_URL,
-    "capabilities": ["a2a", "tool-use", "chat"],
-    "input": {"type": "text"},
-    "output": {"type": "text"},
-    "tools": []
+    "capabilities": {
+        "a2a": True,
+        "tool-use": True,
+        "chat": True
+    },
+    "skills": []  
 }
 
+# Populate skills from your discovered tools
 for tool in valid_tools:
-    tool_info = {
+    skill = {
+        "id": tool.name,  
         "name": tool.name,
         "description": tool.description or "No description provided.",
     }
 
     if hasattr(tool, "args_schema") and tool.args_schema:
         try:
-            tool_info["parameters"] = tool.args_schema.schema()
+            skill["parameters"] = tool.args_schema.schema()
         except Exception:
-            tool_info["parameters"] = {"type": "object", "properties": {}}
+            skill["parameters"] = {"type": "object", "properties": {}}
 
-    agent_card["tools"].append(tool_info)
+    agent_card["skills"].append(skill)
 
 os.makedirs(AGENT_CARD_OUTPUT_DIR, exist_ok=True)
 with open(AGENT_CARD_PATH, "w") as f:
@@ -641,6 +647,10 @@ with open(AGENT_CARD_PATH, "w") as f:
 
 print(f"✅ A2A agent card written to {AGENT_CARD_PATH}")
 print(f"🌐 Agent is reachable at: {AGENT_URL}")
+print("DEBUG: Listing contents of AGENT_CARD_OUTPUT_DIR")
+print(os.listdir(AGENT_CARD_OUTPUT_DIR))
+print("DEBUG: Full absolute path check:", os.path.abspath(AGENT_CARD_PATH))
+
 
 #llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro-exp-03-25", temperature=0.0)
 
