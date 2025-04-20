@@ -215,7 +215,7 @@ docker run -p 10000:10000 \
     -v $(pwd)/a2a:/a2a \
     --env-file .env \
     -e LANGGRAPH_URL=http://host.docker.internal:2024 \
-    -e PUBLIC_BASE_URL=https://0d5a-70-53-207-50.ngrok-free.app \
+    -e PUBLIC_BASE_URL=https://ee30-70-53-207-50.ngrok-free.app/ \
     -v /home/johncapobianco/MCPyATS/shared_output:/output \
     -e A2A_PORT=10000 \
     a2a-adapter
