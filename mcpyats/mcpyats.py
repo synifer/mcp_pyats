@@ -812,7 +812,7 @@ AGENT_CARD_PATH = os.path.join(AGENT_CARD_OUTPUT_DIR, "agent.json")
 # Environment variables or defaults
 AGENT_NAME = os.getenv("A2A_AGENT_NAME", "pyATS Agent")
 AGENT_DESCRIPTION = os.getenv("A2A_AGENT_DESCRIPTION", "Cisco pyATS Agent with access to many MCP tools")
-AGENT_HOST = os.getenv("A2A_AGENT_HOST", "ee30-70-53-207-50.ngrok-free.app ")
+AGENT_HOST = os.getenv("A2A_AGENT_HOST", "ee30-70-53-207-50.ngrok-free.app")
 AGENT_PORT = os.getenv("A2A_AGENT_PORT", "10000")
 
 AGENT_URL = f"https://{AGENT_HOST}"
