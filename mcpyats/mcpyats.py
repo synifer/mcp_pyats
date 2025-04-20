@@ -25,8 +25,9 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, Tool
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-from langchain_openai import ChatOpenAI
+A2A_PEER_AGENTS = os.getenv("A2A_PEER_AGENTS", "").split(",")
 
 load_dotenv()
 
@@ -155,6 +156,14 @@ def schema_to_pydantic_model(name: str, schema: dict):
 
     return type(name, (BaseModel,), namespace)
 
+def summarize_recent_tool_outputs(context: dict, limit: int = 3) -> str:
+    summaries = []
+    for key, val in list(context.items())[-limit:]:
+        if isinstance(val, (str, dict, list)):
+            preview = str(val)[:500]  # Avoid large dumps
+            summaries.append(f"- {key}: {preview}")
+    return "\n".join(summaries)
+
 # Define the input schema for the delegation tool
 class DelegateToPeerSchema(BaseModel):
     peer_agent_url: str = Field(description="The base URL of the peer A2A agent to contact (e.g., http://agent2.example.com:10001).")
@@ -191,7 +200,7 @@ async def delegate_task_to_peer_agent(peer_agent_url: str, task_description: str
                 "role": "user",
                 "parts": [{"type": "text", "text": task_description}]
             },
-            "acceptedOutputModes": ["text"] # Specify desired output
+            "acceptedOutputModes": ["text", "structured"]# Specify desired output
             # Add other params like historyLength if needed
         },
         "id": request_id
@@ -539,6 +548,13 @@ async def get_tools_for_service(service_name, command, discovery_method, call_me
 
                         try:
                             # Validate arguments using the Pydantic model with filtered input
+                            # 👇 Add this block before calling input_model(**filtered_kwargs)
+                            if captured_tool_name == "download_chart":
+                                if "type" in filtered_kwargs:
+                                    chart_keys = ["type", "labels", "datasets", "options", "title"]
+                                    config = {k: filtered_kwargs[k] for k in chart_keys if k in filtered_kwargs}
+                                    output_path = filtered_kwargs.get("outputPath", "/output/chart.png")
+                                    filtered_kwargs = {"config": config, "outputPath": output_path}                            
                             validated_args = captured_input_model(**filtered_kwargs).dict()
                             # Call the actual tool execution logic (which runs in a subprocess)
                             return await service_discoveries[captured_service_name].call_tool(captured_tool_name, validated_args, timeout=120) # Increased default timeout
@@ -601,6 +617,101 @@ async def get_tools_for_service(service_name, command, discovery_method, call_me
         logger.error(f"❌ Tool discovery error in {service_name}: {e}", exc_info=True)
 
     return tools
+
+async def discover_agent(url: str) -> Optional[dict]:
+    """
+    Discovers metadata from a peer agent by fetching its /.well-known/agent.json file.
+
+    Args:
+        url (str): Base URL of the peer agent, e.g. http://agent2:10001
+
+    Returns:
+        dict: The parsed agent metadata if successful, or None if not.
+    """
+    cleaned_url = url.strip().rstrip("/")
+    if not cleaned_url.startswith("http://") and not cleaned_url.startswith("https://"):
+        cleaned_url = "http://" + cleaned_url
+
+    discovery_url = f"{cleaned_url}/.well-known/agent.json"
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(discovery_url, timeout=10.0)
+            response.raise_for_status()
+            agent_data = response.json()
+            return agent_data
+    except httpx.RequestError as e:
+        logger.error(f"Network error discovering peer agent at {discovery_url}: {e}")
+    except httpx.HTTPStatusError as e:
+        logger.error(f"HTTP error {e.response.status_code} when accessing {discovery_url}: {e.response.text}")
+    except json.JSONDecodeError:
+        logger.error(f"Failed to decode JSON from {discovery_url}")
+    except Exception as e:
+        logger.error(f"Unexpected error discovering peer agent at {discovery_url}: {e}", exc_info=True)
+
+    return None
+
+def make_delegation_coroutine(peer_agent_url: str):
+    async def wrapper(**kwargs):
+        return await delegate_task_to_peer_agent(peer_agent_url=peer_agent_url, **kwargs)
+    return wrapper
+
+async def load_delegated_tools(peer_agents: Dict[str, dict]) -> List[Tool]:
+    """Creates delegation tools and wraps each peer agent's skills."""
+    delegated_tools = []
+
+    for url, agent_card in peer_agents.items():
+        agent_name = agent_card.get("name", "peer").replace(" ", "_").lower()
+
+        for skill in agent_card.get("skills", []):
+            tool_name = skill["id"]
+            tool_description = skill.get("description", "")
+            tool_schema = skill.get("parameters", {})
+
+            try:
+                InputModel = schema_to_pydantic_model(f"{tool_name}_Input", tool_schema)
+
+                async def make_delegate(peer_url=url, skill_id=tool_name):
+                    async def delegate(**kwargs):
+                        # Filter out None values from kwargs just like you do for local tools
+                        filtered_tool_input = {k: v for k, v in kwargs.items() if v is not None}
+
+                        return await delegate_task_to_peer_agent(
+                            peer_agent_url=peer_url,
+                            task_description=f"Call remote tool '{skill_id}' with args: {json.dumps(filtered_tool_input)}"
+                        )
+                    return delegate
+
+                # Important: Await and assign the coroutine before tool construction
+                delegate_coroutine = await make_delegate(url, tool_name)
+
+                tool = StructuredTool.from_function(
+                    name=f"{tool_name}_via_{agent_name}",
+                    description=f"[Remote] {tool_description}",
+                    args_schema=InputModel,
+                    coroutine=delegate_coroutine
+                )
+                delegated_tools.append(tool)
+                print(f"✅ Wrapped remote tool: {tool.name}")
+
+            except Exception as e:
+                print(f"⚠️ Could not wrap tool {tool_name} from {url}: {e}")
+
+        # Also create a delegation tool (explicit peer task delegation)
+        delegation_tool = StructuredTool.from_function(
+            name=f"delegate_to_{agent_name}",
+            description=f"Delegate task directly to {agent_name} at {url}",
+            args_schema=DelegateToPeerSchema,
+            coroutine=lambda **kwargs: delegate_task_to_peer_agent(peer_agent_url=url, **kwargs)
+        )
+        delegated_tools.append(delegation_tool)
+
+    return delegated_tools
+
+embedding = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
+
+vector_store = InMemoryVectorStore(embedding=embedding)
+
 @traceable
 async def load_all_tools():
     """Async function to load tools from different MCP services and local files."""
@@ -632,41 +743,50 @@ async def load_all_tools():
         print(docker_ps_result.stdout)
 
         service_discoveries = {}
-
-        # Gather tools from all services
-        all_service_tools = await asyncio.gather(
+        local_tools_lists  = await asyncio.gather(
             *[get_tools_for_service(service, command, discovery_method, call_method, service_discoveries)
               for service, command, discovery_method, call_method in tool_services]
         )
 
-        # Add local tools
-        print("🔍 Loading Local Tools:")
-        #local_tools = load_local_tools_from_folder("tools")
-        #print(f"🧰 Local Tools Found: {[tool.name for tool in local_tools]}")
-
-        # Combine all tools
         all_tools = []
-        for tools_list in all_service_tools:
-            if tools_list:
-                all_tools.extend(tools_list)
-        #all_tools.extend(local_tools)
+        for tools_list in local_tools_lists :
+            all_tools.extend(tools_list)
 
-        # *** ADD THE NEW DELEGATION TOOL ***
-        all_tools.append(a2a_delegation_tool)
-        logger.info(f"✅ Added A2A Delegation Tool: {a2a_delegation_tool.name}")
+        # ✅ Peer discovery inside this function
+        # ✅ Peer discovery inside this function
+        peer_agents = {}
+        for url in A2A_PEER_AGENTS:
+            url = url.strip()
+            if not url:
+                continue
+            agent = await discover_agent(url)
+            if agent:
+                peer_agents[url] = agent
+                print(f"✅ Discovered peer: {url}")
+            else:
+                print(f"⚠️ Failed peer discovery: {url}")
 
-        print("🔧 Comprehensive Tool Discovery Results:")
-        print("✅ All Discovered Tools:", [t.name for t in all_tools])
+        # ✅ Load delegated tools separately
+        delegated_tools = await load_delegated_tools(peer_agents)
 
-        if not all_tools:
-            print("🚨 WARNING: NO TOOLS DISCOVERED 🚨")
-            print("Potential Issues:")
-            print("1. Docker containers not running")
-            print("2. Incorrect discovery methods")
-            print("3. Network/communication issues")
-            print("4. Missing tool configuration")
+        # ✅ Finalize tool sets
+        local_tools = []
+        for tools_list in local_tools_lists:
+            local_tools.extend(tools_list)
 
-        return all_tools
+        all_tools = local_tools + delegated_tools + [a2a_delegation_tool]
+
+        # ✅ Index only local tools for tool selection
+        tool_documents = [
+            Document(
+                page_content=f"Tool name: {tool.name}. Tool purpose: {tool.description}",
+                metadata={"tool_name": tool.name}
+            )
+            for tool in local_tools if hasattr(tool, "description")
+        ]
+        vector_store.add_documents(tool_documents)
+
+        return all_tools, local_tools
 
     except Exception as e:
         print(f"❌ CRITICAL TOOL DISCOVERY ERROR: {e}")
@@ -675,7 +795,7 @@ async def load_all_tools():
         return []
 
 # Load tools
-valid_tools = asyncio.run(load_all_tools())
+all_tools, local_tools = asyncio.run(load_all_tools())
 
 def format_tool_descriptions(tools: List[Tool]) -> str:
     return "\n".join(
@@ -683,31 +803,16 @@ def format_tool_descriptions(tools: List[Tool]) -> str:
         for tool in tools
     )
 
-embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-
-vector_store = InMemoryVectorStore(embedding=embedding)
-
-tool_documents = [
-    Document(
-        page_content=f"Tool name: {tool.name}. Tool purpose: {tool.description}",
-        metadata={"tool_name": tool.name}
-    )
-    for tool in valid_tools if hasattr(tool, "description")
-]
+print("🔧 All bound tools:", [t.name for t in all_tools])
 
 
-document_ids = vector_store.add_documents(tool_documents)
-
-print("🔧 All bound tools:", [t.name for t in valid_tools])
-
-
-AGENT_CARD_OUTPUT_DIR = os.getenv("AGENT_CARD_OUTPUT_DIR", "/a2a/.well-known")
+AGENT_CARD_OUTPUT_DIR = os.getenv("AGENT_CARD_OUTPUT_DIR", "/mcpyats/.well-known")
 AGENT_CARD_PATH = os.path.join(AGENT_CARD_OUTPUT_DIR, "agent.json")
 
 # Environment variables or defaults
-AGENT_NAME = os.getenv("A2A_AGENT_NAME", "Cisco pyATS Agent Enhanced with Model Context Protocol Toolkit")
-AGENT_DESCRIPTION = os.getenv("A2A_AGENT_DESCRIPTION", "LangGraph-based MCP agent for Selector AI and other MCPs.")
-AGENT_HOST = os.getenv("A2A_AGENT_HOST", "59a5-70-53-207-50.ngrok-free.app")
+AGENT_NAME = os.getenv("A2A_AGENT_NAME", "pyATS Agent")
+AGENT_DESCRIPTION = os.getenv("A2A_AGENT_DESCRIPTION", "Cisco pyATS Agent with access to many MCP tools")
+AGENT_HOST = os.getenv("A2A_AGENT_HOST", "ee30-70-53-207-50.ngrok-free.app ")
 AGENT_PORT = os.getenv("A2A_AGENT_PORT", "10000")
 
 AGENT_URL = f"https://{AGENT_HOST}"
@@ -731,7 +836,7 @@ agent_card = {
 }
 
 # Populate skills from your discovered tools
-for tool in valid_tools:
+for tool in local_tools:
     skill = {
         "id": tool.name,  
         "name": tool.name,
@@ -761,7 +866,7 @@ print("DEBUG: Full absolute path check:", os.path.abspath(AGENT_CARD_PATH))
 
 llm = ChatOpenAI(model_name="gpt-4o", temperature="0.1")
 
-llm_with_tools = llm.bind_tools(valid_tools)
+llm_with_tools = llm.bind_tools(all_tools)
 
 @traceable
 class ContextAwareToolNode(ToolNode):
@@ -818,6 +923,15 @@ class ContextAwareToolNode(ToolNode):
 
             try:
                  # Invoke the tool (which now calls MCPToolDiscovery.call_tool)
+                 # PATCH: Fix path for read_file to convert /output → /projects
+                 if tool_name == "read_file" and isinstance(filtered_tool_input, dict):
+                     # Accept either 'file_path' or 'path'
+                     path_val = filtered_tool_input.pop("file_path", filtered_tool_input.get("path", ""))
+                     if path_val.startswith("/output"):
+                         path_val = path_val.replace("/output", "/projects")
+                         logger.info(f"🔧 Remapped file path for read_file: /output → /projects → {path_val}")
+                     filtered_tool_input["path"] = path_val  # overwrite normalized key
+
                  tool_response = await tool.ainvoke(filtered_tool_input, config=config) # Pass config
                  logger.info(f"Received response from tool {tool_name}: {type(tool_response)}")
 
@@ -885,7 +999,6 @@ class ContextAwareToolNode(ToolNode):
             # "__next__": "handle_tool_results" # This seems to be set by the graph edge already
         }
     
-@traceable
 async def select_tools(state: GraphState):
     messages = state.get("messages", [])
     context = state.get("context", {})
@@ -964,7 +1077,20 @@ Consider these guidelines:
             selected_tool_names = []
         else:
             potential_names = [name.strip() for name in raw_selection.split(',')]
-            selected_tool_names = [name for name in potential_names if name in tool_infos]
+            
+            # 🔧 Normalize selection for delegated tools (e.g., ask_selector → ask_selector_via_xxx)
+            normalized_tool_names = {}
+            for name in tool_infos.keys():
+                base_name = name.split("_via_")[0] if "_via_" in name else name
+                normalized_tool_names[base_name] = name  # Always map shortest name → full name
+
+            # Map LLM-chosen names to full tool names
+            selected_tool_names = [
+                normalized_tool_names.get(name, name)
+                for name in potential_names
+                if name in normalized_tool_names
+            ]
+
             if len(selected_tool_names) != len(potential_names):
                 logger.warning(f"⚠️ LLM selected invalid tools: {set(potential_names) - set(selected_tool_names)}")
 
@@ -994,6 +1120,11 @@ GENERAL RULES:
 3. DO NOT guess. Only use tools when the user explicitly requests an action that matches the tools purpose.
 4. NEVER call a tool without all required parameters.
 5. NEVER call a tool just because the output of another tool suggests a next step — unless the user explicitly asked for that.
+
+🧠 CONTEXT MEMORY:
+- You may use results of previously run tools by referring to their output in memory.
+- For example, if you ran a tool like `ask_selector_via_agent2`, the result will be stored and available in memory under that name.
+- When using follow-up tools like `email_send_message`, reuse this result as needed.
 
 ✅ WHEN TO USE TOOLS:
 
@@ -1150,7 +1281,7 @@ GENERAL RULES:
 
 @traceable
 async def assistant(state: GraphState):
-    """Handles assistant logic and LLM interaction, with support for sequential tool calls."""
+    """Handles assistant logic and LLM interaction, with support for sequential tool calls and uploaded file processing."""
     messages = state.get("messages", [])
     context = state.get("context", {})
     selected_tool_names = context.get("selected_tools", [])
@@ -1160,47 +1291,62 @@ async def assistant(state: GraphState):
     # If selected_tool_names is empty, fall back to ALL tools not already used
     if selected_tool_names:
         tools_to_use = [
-            tool for tool in valid_tools 
+            tool for tool in all_tools 
             if tool.name in selected_tool_names and tool.name not in used
         ]
     else:
         # Broaden scope — allow Gemini to pick missed tools (Slack, GitHub, etc.)
         tools_to_use = [
-            tool for tool in valid_tools 
+            tool for tool in all_tools 
             if tool.name not in used
         ]
+
+    # 👇 STEP 3: Handle uploaded files from context
+    uploaded_files = context.get("metadata", {}).get("uploaded_files", [])
+    file_contexts = []
+    for path in uploaded_files:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            file_contexts.append(f"--- {os.path.basename(path)} ---\n{content}\n")
+        except Exception as e:
+            file_contexts.append(f"Could not read file {path}: {e}")
+
     # If we're in continuous mode, don't re-select tools
     if run_mode == "continue":
         last_tool_message = None
-        # Find the last tool message
         for msg in reversed(messages):
             if isinstance(msg, ToolMessage):
                 last_tool_message = msg
                 break
 
         if last_tool_message:
-            # Add the tool message to ensure proper conversation context
             new_messages = [SystemMessage(content=system_msg)] + messages
 
             llm_with_tools = llm.bind_tools(tools_to_use)
             response = await llm_with_tools.ainvoke(new_messages, config={"tool_choice": "auto"})
 
             if hasattr(response, "tool_calls") and response.tool_calls:
-                # Continue using tools
                 return {"messages": [response], "context": context, "__next__": "tools"}
             else:
-                # No more tools to use, return to user
                 return {"messages": [response], "context": context, "__next__": "__end__"}
 
     # Initial processing or starting a new sequence
     llm_with_tools = llm.bind_tools(tools_to_use)
     formatted_tool_descriptions = format_tool_descriptions(tools_to_use)
     formatted_system_msg = system_msg.format(tool_descriptions=formatted_tool_descriptions)
+    context_summary = summarize_recent_tool_outputs(context)
+
+    if context_summary:
+        formatted_system_msg += f"\n\n📅 RECENT TOOL RESPONSES:\n{context_summary}"
+
+    if file_contexts:
+        formatted_system_msg += f"\n\n📎 UPLOADED FILES:\n{''.join(file_contexts)}"
+
     new_messages = [SystemMessage(content=formatted_system_msg)] + messages
 
     try:
         logger.info(f"assistant: Invoking LLM with new_messages: {new_messages}")
-        # Always use auto tool choice to allow model to decide which tools to use
         response = await llm_with_tools.ainvoke(new_messages, config={"tool_choice": "auto"})
         logger.info(f"Raw LLM Response: {response}")
 
@@ -1239,7 +1385,7 @@ graph_builder = StateGraph(GraphState)
 # Define core nodes
 graph_builder.add_node("select_tools", select_tools)
 graph_builder.add_node("assistant", assistant)
-graph_builder.add_node("tools", ContextAwareToolNode(tools=valid_tools))
+graph_builder.add_node("tools", ContextAwareToolNode(tools=all_tools))
 graph_builder.add_node("handle_tool_results", handle_tool_results)
 
 # Define clean and minimal edges
@@ -1271,6 +1417,7 @@ compiled_graph = graph_builder.compile()
 async def run_cli_interaction():
     """Runs the CLI interaction loop."""
     state = {"messages": [], "context": {"used_tools": []}}
+    print("🛠️ Available tools:", [tool.name for tool in all_tools])
     while True:
         user_input = input("User: ")
         if user_input.lower() in ["exit", "quit"]:
