@@ -11,7 +11,7 @@ import subprocess
 from functools import wraps
 from dotenv import load_dotenv
 from langsmith import traceable
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, validator
 from typing_extensions import TypedDict
 from langchain_core.documents import Document
 from langchain_core.messages import ToolMessage, BaseMessage
@@ -106,40 +106,53 @@ def schema_to_pydantic_model(name: str, schema: dict):
             if not items_schema:
                 logger.warning(f"⚠️ Skipping field '{field_name}' (array missing 'items')")
                 continue
-            item_type = items_schema.get("type", "string")
-
-            # ... (handle array of simple types: string, integer, number, boolean) ...
-            if item_type == "string":
-                 field_type = List[str]
-            elif item_type == "integer":
-                 field_type = List[int]
-            elif item_type == "number":
-                 field_type = List[float]
-            elif item_type == "boolean":
-                 field_type = List[bool]
-
-            # --- MODIFICATION START ---
-            elif item_type == "object":
-                # Check if the items schema actually defines properties
-                if "properties" in items_schema and items_schema["properties"]:
-                    # If properties are defined, create a specific item model
-                    item_model = schema_to_pydantic_model(name + "_" + field_name + "_Item", items_schema)
+            
+            if "$ref" in items_schema:
+                ref = items_schema["$ref"]
+                ref_name = ref.split("/")[-1]
+                ref_schema = schema.get("$defs", {}).get(ref_name)
+                if ref_schema:
+                    item_model = schema_to_pydantic_model(f"{name}_{field_name}_Item", ref_schema)
                     field_type = List[item_model]
                 else:
-                    # If no properties defined for items, assume generic dictionaries
-                    logger.warning(f"Treating array item '{field_name}' as generic List[Dict[str, Any]] due to missing/empty properties in items schema.")
-                    field_type = List[Dict[str, Any]] # Use List[Dict] instead of List[EmptyModel]
-            # --- MODIFICATION END ---
-            else: # Handle array of Any
+                    logger.warning(f"⚠️ Could not resolve $ref for {ref}")
+                    field_type = List[Dict[str, Any]]
+
+            elif items_schema.get("type") == "object":
+                # Handle inline object definition
+                if "properties" in items_schema and items_schema["properties"]:
+                    item_model = schema_to_pydantic_model(f"{name}_{field_name}_Item", items_schema)
+                    field_type = List[item_model]
+                else:
+                    field_type = List[Dict[str, Any]]
+
+            elif items_schema.get("type") == "string":
+                field_type = List[str]
+            elif items_schema.get("type") == "integer":
+                field_type = List[int]
+            elif items_schema.get("type") == "number":
+                field_type = List[float]
+            elif items_schema.get("type") == "boolean":
+                field_type = List[bool]
+            else:
                 field_type = List[Any]
 
         elif json_type == "object":
-             # Also check objects - if no properties, maybe treat as Dict[str, Any]?
-             if "properties" in field_schema and field_schema["properties"]:
-                   # Potentially create nested model if needed, or keep as Dict for simplicity
-                   field_type = Dict[str, Any] # Keeping as Dict for now
-             else:
-                   field_type = Dict[str, Any] # Generic object becomes Dict
+            if "properties" in field_schema:
+                nested_model = schema_to_pydantic_model(name + "_" + field_name, field_schema)
+                field_type = nested_model
+            elif "$ref" in field_schema:
+                ref = field_schema["$ref"]
+                ref_name = ref.split("/")[-1]
+                ref_schema = schema["$defs"].get(ref_name)
+                if ref_schema:
+                    nested_model = schema_to_pydantic_model(name + "_" + ref_name, ref_schema)
+                    field_type = nested_model
+                else:
+                    logger.warning(f"⚠️ Could not resolve $ref for {ref}")
+                    field_type = Dict[str, Any]
+            else:
+                field_type = Dict[str, Any]
 
         else: # Handle Any type
             field_type = Any
@@ -259,6 +272,28 @@ a2a_delegation_tool = StructuredTool.from_function(
     coroutine=delegate_task_to_peer_agent # Use the async function
 )
 
+async def call_drawio_mcp_http(method_name: str, url: str, arguments: dict = None):
+    request_id = str(uuid.uuid4())
+    payload = {
+        "jsonrpc": "2.0",
+        "id": request_id,
+        "method": method_name,
+        "params": arguments or {}
+    }
+
+    logger.info(f"📤 Calling Draw.io MCP via HTTP: {method_name} at {url}")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            logger.info(f"✅ MCP Response: {result}")
+            return result
+        except httpx.HTTPError as e:
+            logger.error(f"❌ MCP HTTP Error: {e}")
+            return None
+
+
 class MCPToolDiscovery:
     """Discovers and calls tools in MCP containers."""
     def __init__(self, container_name: str, command: List[str], discovery_method: str = "tools/discover",
@@ -270,156 +305,47 @@ class MCPToolDiscovery:
         self.discovered_tools = []
 
     @traceable
-    async def discover_tools(self) -> List[Dict[str, Any]]:
-        """Discovers tools from the MCP container using asyncio.""" # Docstring updated
+    async def discover_tools(self, timeout=30.0) -> List[Dict[str, Any]]:
+        """Discovers tools from the MCP container or HTTP endpoint."""
         print(f"🔍 Discovering tools from container: {self.container_name}")
         print(f"🕵️ Discovery Method: {self.discovery_method}")
 
-        try:
-            discovery_payload = {
-                "jsonrpc": "2.0",
-                "method": self.discovery_method,
-                "params": {},
-                "id": "1"
-            }
-            print(f"Sending discovery payload: {json.dumps(discovery_payload)}") # Use json.dumps for clarity
-            command = ["docker", "exec", "-i", self.container_name] + self.command
-
-            # Use asyncio subprocess compatible with persistent mode (though still executing per call here)
-            process = await asyncio.create_subprocess_exec(
-                *command,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                env={**os.environ, "PYTHONUNBUFFERED": "1"} # Ensure unbuffered output
-            )
-
-            # Send payload and get output using communicate()
-            # communicate() writes input, closes stdin, reads stdout/stderr until EOF, waits for process exit.
-            # This works for single request/response even if server is persistent,
-            # as closing stdin usually signals the server to respond.
+        # --- Handle HTTP-based discovery ---
+        if isinstance(self.command, str) and self.command.startswith("http"):
+            url = self.command  # Full URL passed as the "command"
             try:
-                 # Added a timeout for safety
-                stdout, stderr = await asyncio.wait_for(
-                     process.communicate(input=json.dumps(discovery_payload).encode() + b"\n"),
-                     timeout=30.0 # Adjust timeout as needed
-                )
-            except asyncio.TimeoutError:
-                 logger.error(f"⏱️ Tool discovery for {self.container_name} timed out.")
-                 try:
-                     process.kill()
-                 except:
-                     pass
-                 return []
-
-
-            stdout_decoded = stdout.decode().strip()
-            stderr_decoded = stderr.decode().strip()
-
-            logger.info(f"🔬 Discovery Subprocess Exit Code: {process.returncode}")
-            logger.info(f"🔬 Discovery Full subprocess stdout: {stdout_decoded}")
-            if stderr_decoded: # Only log stderr if it's not empty
-                 logger.info(f"🔬 Discovery Full subprocess stderr: {stderr_decoded}")
-
-            # Process the response (similar logic as before, but using decoded stdout)
-            stdout_lines = stdout_decoded.split("\n")
-            print("📥 Raw discovery response lines:", stdout_lines) # Keep for debugging
-
-            if stdout_lines:
-                last_line = None
-                for line in reversed(stdout_lines):
-                     # Look for a line that starts like JSON object or array
-                    if line.strip().startswith("{") or line.strip().startswith("["):
-                        last_line = line.strip()
-                        break
-                if last_line:
-                    try:
-                        response = json.loads(last_line)
-                        # --- rest of JSON parsing logic remains the same ---
-                        if "result" in response:
-                            if isinstance(response["result"], list):
-                                tools = response["result"]
-                            elif isinstance(response["result"], dict) and "tools" in response["result"]:
-                                tools = response["result"]["tools"]
-                            else:
-                                print("❌ Unexpected 'result' structure.")
-                                return []
-                        # Handle cases where 'result' might not exist but the call was technically successful (exit 0)
-                        elif process.returncode == 0:
-                             print("ℹ️ Discovery response received but no 'result' field found. Assuming no tools.")
-                             tools = []
-                        else:
-                             # If no 'result' and non-zero exit code, it's likely an error reported in stderr
-                             print(f"❌ Discovery failed. Exit code {process.returncode}. Check stderr logs.")
-                             return []
-
-
-                        if tools:
-                             print("✅ Discovered tools:", [tool.get("name", "Unnamed Tool") for tool in tools])
-                             self.discovered_tools = tools # Store discovered tools if needed later
-                             return tools
-                        else:
-                            print("✅ No tools found in response.")
-                            return []
-                    except json.JSONDecodeError as e:
-                        print(f"❌ JSON Decode Error on line '{last_line}': {e}")
-                        return []
-                else:
-                    print("❌ No valid JSON line found in stdout.")
+                result = await call_drawio_mcp_http(self.discovery_method, url=url)
+                if not result:
+                    logger.error("❌ No response received from HTTP MCP")
                     return []
-            else:
-                print("❌ No response lines received from stdout.")
+                if "result" not in result:
+                    logger.warning(f"⚠️ Unexpected HTTP response format: {result}")
+                    return []
+                tools = result["result"]
+                print("✅ Discovered tools:", [tool.get("name", "Unnamed Tool") for tool in tools])
+                self.discovered_tools = tools
+                return tools
+            except Exception as e:
+                logger.error(f"❌ HTTP discovery error: {e}", exc_info=True)
                 return []
-        except Exception as e:
-            print(f"❌ Error during async tool discovery: {e}")
-            logger.error("Exception during tool discovery", exc_info=True) # Log traceback
+
+        # --- Handle STDIO-based (subprocess) discovery ---
+        if not isinstance(self.command, list):
+            logger.error(f"❌ Invalid command type: {type(self.command)}. Must be list or HTTP string.")
             return []
-                    
-    @traceable
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any], timeout=60):
-        """Calls a tool in the MCP container with improved logging and error reporting.""" # Updated docstring
-        logger.info(f"🔍 Attempting to call tool: {tool_name}")
-        # Avoid logging potentially large arguments by default, maybe log keys or type
-        if isinstance(arguments, dict):
-            logger.info(f"📦 Argument Keys: {list(arguments.keys())}")
-        else:
-            logger.info(f"📦 Arguments Type: {type(arguments)}")
 
-
-        # --- Network inspection part remains the same ---
-        try:
-            net_process = await asyncio.create_subprocess_exec(
-                "docker", "network", "inspect", "bridge",
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-            net_stdout, net_stderr = await net_process.communicate()
-            if net_process.returncode == 0:
-                 logger.info(f"🌐 Network Details: {net_stdout.decode()[:500]}...") # Log truncated details
-            else:
-                 logger.warning(f"⚠️ Network inspection failed with code {net_process.returncode}: {net_stderr.decode()}")
-        except Exception as e:
-            logger.error(f"❌ Network inspection exception: {e}")
-        # --- End network inspection ---
-
+        discovery_payload = {
+            "jsonrpc": "2.0",
+            "method": self.discovery_method,
+            "params": {},
+            "id": str(uuid.uuid4())
+        }
+        payload_bytes = json.dumps(discovery_payload).encode() + b"\n"
+        logger.debug(f"Sending discovery payload: {discovery_payload}")
 
         command = ["docker", "exec", "-i", self.container_name] + self.command
 
         try:
-            normalized_args = arguments
-            # Specific arg normalization remains
-            if tool_name == "create_or_update_file" and isinstance(normalized_args, dict) and "sha" in normalized_args and normalized_args["sha"] is None:
-                del normalized_args["sha"]
-
-            payload = {
-                "jsonrpc": "2.0",
-                "method": self.call_method,
-                "params": {"name": tool_name, "arguments": normalized_args},
-                "id": "2", # Consider unique IDs if parallel calls happen
-            }
-
-            logger.info(f"🚀 Sending Payload for {tool_name}") # Don't log full payload by default if args are large
-
             process = await asyncio.create_subprocess_exec(
                 *command,
                 stdin=asyncio.subprocess.PIPE,
@@ -428,86 +354,153 @@ class MCPToolDiscovery:
                 env={**os.environ, "PYTHONUNBUFFERED": "1"}
             )
 
+            process.stdin.write(payload_bytes)
+            await process.stdin.drain()
+            process.stdin.write_eof()
+
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(input=json.dumps(payload).encode() + b"\n"),
-                    timeout=timeout
-                )
-
-                stdout_decoded = stdout.decode().strip()
-                stderr_decoded = stderr.decode().strip()
-
-                logger.info(f"🔬 Subprocess Exit Code for {tool_name}: {process.returncode}")
-                logger.info(f"🔬 Full subprocess stdout for {tool_name}: {stdout_decoded}")
-                if stderr_decoded:
-                    logger.info(f"🔬 Full subprocess stderr for {tool_name}: {stderr_decoded}")
-
-
-                if process.returncode != 0:
-                    error_detail = stderr_decoded or stdout_decoded or f"Tool {tool_name} exited with code {process.returncode}"
-                    logger.error(f"❌ Subprocess for {tool_name} returned non-zero exit code: {process.returncode}")
-                    logger.error(f"🚨 Error Details: {error_detail}")
-                    # Return a clear error string indicating subprocess failure
-                    return f"Subprocess Error: {error_detail}"
-
-                # Find the last valid JSON line in stdout
-                output_lines = stdout_decoded.split("\n")
-                last_json_line = None
-                for line in reversed(output_lines):
-                     line = line.strip()
-                     if line.startswith("{") or line.startswith("["):
-                          last_json_line = line
-                          break # Found the likely JSON response
-
-                if last_json_line:
-                    try:
-                        response = json.loads(last_json_line)
-                        logger.info(f"✅ Parsed JSON response for {tool_name}: {response}")
-
-                        # *** MODIFICATION START ***
-                        if "error" in response:
-                            # Extract specific error message/data from JSON
-                            error_content = response["error"]
-                            logger.error(f"🚨 Tool '{tool_name}' reported error: {error_content}")
-                            # Return a string clearly indicating a tool error, including the specific content
-                            # Convert dict/list errors to string for ToolMessage compatibility
-                            if isinstance(error_content, (dict, list)):
-                                 error_content_str = json.dumps(error_content)
-                            else:
-                                 error_content_str = str(error_content)
-                            return f"Tool Error: {error_content_str}"
-                        elif "result" in response:
-                            # Success case
-                            return response["result"]
-                        else:
-                            # Valid JSON but unexpected structure
-                             logger.warning(f"⚠️ Unexpected JSON structure from {tool_name}: {response}")
-                             # Return the raw dict for now, might need adjustment
-                             return response
-                         # *** MODIFICATION END ***
-
-                    except json.JSONDecodeError:
-                        logger.error(f"❌ Failed to decode JSON from suspected line: {last_json_line}")
-                        # Fall through to the generic error below if JSON parsing fails
-
-                # If no valid JSON line found after successful exit
-                logger.error(f"❌ No valid JSON response found in stdout for {tool_name}, though process exited cleanly.")
-                # Return the raw stdout or a specific error message
-                return f"Error: No valid JSON found in tool output. Raw stdout: {stdout_decoded}"
-
-
+                response_line_bytes = await asyncio.wait_for(process.stdout.readline(), timeout=timeout)
+                response_line = response_line_bytes.decode().strip() if response_line_bytes else None
             except asyncio.TimeoutError:
-                logger.error(f"⏱️ Tool call to {tool_name} timed out after {timeout} seconds")
-                try:
-                    process.kill()
-                except:
-                    pass
-                return f"Error: Tool call to {tool_name} timed out after {timeout} seconds"
+                logger.error(f"⏱️ Discovery timed out after {timeout}s for {self.container_name}")
+                process.kill()
+                await process.wait()
+                return []
+
+            if not response_line:
+                logger.error("❌ No response line received from stdout.")
+                stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=1.0)
+                logger.error(f"Associated stderr: {stderr_data.decode()}")
+                return []
+
+            response = json.loads(response_line)
+
+            if "error" in response:
+                logger.error(f"🚨 Discovery error: {response['error']}")
+                return []
+            elif "result" in response:
+                result_data = response["result"]
+                tools = result_data if isinstance(result_data, list) else result_data.get("tools", [])
+                print("✅ Discovered tools:", [tool.get("name", "Unnamed Tool") for tool in tools])
+                self.discovered_tools = tools
+                return tools
+            else:
+                logger.warning(f"⚠️ Unexpected JSON structure: {response}")
+                return []
 
         except Exception as e:
-             # Catch broader errors during subprocess setup/execution
-             logger.critical(f"🔥 Critical error calling tool {tool_name}", exc_info=True)
-             return f"Critical Framework Error: {e}"
+            logger.error(f"❌ STDIO discovery exception: {e}", exc_info=True)
+            return []
+        finally:
+            if 'process' in locals() and process.returncode is None:
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+                await process.wait()
+    @traceable
+    async def call_tool(self, tool_name: str, arguments: Dict[str, Any], timeout=60.0):
+        """Calls a tool in the MCP container (HTTP or STDIO)."""
+        logger.info(f"🔍 Attempting to call tool: {tool_name}")
+        logger.info(f"📦 Argument Keys: {list(arguments.keys()) if isinstance(arguments, dict) else type(arguments)}")
+
+        # --- Handle HTTP-based tool call ---
+        if isinstance(self.command, str) and self.command.startswith("http"):
+            url = self.command
+            payload = {
+                "jsonrpc": "2.0",
+                "method": self.call_method,
+                "params": {"name": tool_name, "arguments": arguments},
+                "id": str(uuid.uuid4())
+            }
+            try:
+                response = await call_drawio_mcp_http(self.call_method, url, payload)
+                if not response:
+                    logger.error("❌ No response from HTTP MCP call")
+                    return {"error": "No response"}
+                if "error" in response:
+                    logger.error(f"🚨 HTTP tool call error: {response['error']}")
+                    return {"error": response["error"]}
+                return response.get("result", {})
+            except Exception as e:
+                logger.exception(f"❌ Exception during HTTP tool call to {tool_name}")
+                return {"error": str(e)}
+
+        # --- Handle STDIO-based tool call ---
+        if not isinstance(self.command, list):
+            logger.error(f"❌ Invalid command type: {type(self.command)}")
+            return {"error": "Invalid command"}
+
+        # Normalize special-case arguments (e.g., GitHub tools)
+        normalized_args = arguments
+        if tool_name == "create_or_update_file" and normalized_args.get("sha") is None:
+            del normalized_args["sha"]
+
+        payload = {
+            "jsonrpc": "2.0",
+            "method": self.call_method,
+            "params": {"name": tool_name, "arguments": normalized_args},
+            "id": str(uuid.uuid4())
+        }
+        payload_bytes = json.dumps(payload).encode() + b"\n"
+        command = ["docker", "exec", "-i", self.container_name] + self.command
+
+        try:
+            logger.info(f"🚀 Sending payload to {tool_name} via STDIO")
+            process = await asyncio.create_subprocess_exec(
+                *command,
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env={**os.environ, "PYTHONUNBUFFERED": "1"}
+            )
+
+            process.stdin.write(payload_bytes)
+            await process.stdin.drain()
+            process.stdin.write_eof()
+
+            try:
+                response_line_bytes = await asyncio.wait_for(process.stdout.readline(), timeout=timeout)
+                response_line = response_line_bytes.decode().strip() if response_line_bytes else None
+            except asyncio.TimeoutError:
+                logger.error(f"⏱️ Timeout after {timeout}s calling tool {tool_name}")
+                process.kill()
+                await process.wait()
+                return {"error": f"Timeout after {timeout} seconds"}
+
+            if not response_line:
+                logger.error("❌ No response from stdout")
+                stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=1.0)
+                return {"error": "No response", "stderr": stderr_data.decode()}
+
+            logger.info(f"🔬 Raw Response Line Received: {response_line}")
+            try:
+                response = json.loads(response_line)
+            except json.JSONDecodeError:
+                stderr_data = await asyncio.wait_for(process.stderr.read(), timeout=1.0)
+                logger.error("❌ JSON Decode Error")
+                return {"error": "JSON Decode Error", "stderr": stderr_data.decode(), "raw": response_line}
+
+            if "error" in response:
+                logger.error(f"🚨 Tool error: {response['error']}")
+                return {"error": response["error"]}
+            elif "result" in response:
+                return response["result"]
+            else:
+                logger.warning("⚠️ Unexpected response shape")
+                return response
+
+        except Exception as e:
+            logger.critical(f"🔥 Exception in tool call to {tool_name}", exc_info=True)
+            return {"error": str(e)}
+        finally:
+            if process and process.returncode is None:
+                logger.info(f"🧹 Cleaning up subprocess for {tool_name}")
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    pass
+                await process.wait()
             
 @traceable
 async def get_tools_for_service(service_name, command, discovery_method, call_method, service_discoveries):
@@ -554,10 +547,13 @@ async def get_tools_for_service(service_name, command, discovery_method, call_me
                                     chart_keys = ["type", "labels", "datasets", "options", "title"]
                                     config = {k: filtered_kwargs[k] for k in chart_keys if k in filtered_kwargs}
                                     output_path = filtered_kwargs.get("outputPath", "/output/chart.png")
-                                    filtered_kwargs = {"config": config, "outputPath": output_path}                            
+                                    filtered_kwargs = {"config": config, "outputPath": output_path}    
+
+                            logger.info(f"📥 Calling tool '{captured_tool_name}' from service '{captured_service_name}' with validated args: {filtered_kwargs}")
                             validated_args = captured_input_model(**filtered_kwargs).dict()
                             # Call the actual tool execution logic (which runs in a subprocess)
                             return await service_discoveries[captured_service_name].call_tool(captured_tool_name, validated_args, timeout=120) # Increased default timeout
+                        
                         except ValidationError as e:
                             # If validation fails even after filtering (e.g., missing required field)
                             logger.error(f"Pydantic validation failed for {captured_tool_name}: {e}")
@@ -719,22 +715,23 @@ async def load_all_tools():
 
     tool_services = [
         ("pyats-mcp", ["python3", "pyats_mcp_server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("github-mcp", ["node", "dist/index.js"], "list_tools", "call_tool"),
-        ("google-maps-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("sequentialthinking-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("slack-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("excalidraw-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("filesystem-mcp", ["node", "/app/dist/index.js", "/projects"], "tools/list", "tools/call"),
-        ("netbox-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("google-search-mcp", ["node", "/app/build/index.js"], "tools/list", "tools/call"),
-        ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
-        ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
-        ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),    
-        ("nist-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("github-mcp", ["node", "dist/index.js"], "list_tools", "call_tool"),
+        # ("google-maps-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("sequentialthinking-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("slack-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("excalidraw-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("filesystem-mcp", ["node", "/app/dist/index.js", "/projects"], "tools/list", "tools/call"),
+        # ("netbox-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("google-search-mcp", ["node", "/app/build/index.js"], "tools/list", "tools/call"),
+        # ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
+        # ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
+        # ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),    
+        # ("nist-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("drawio-mcp", "http://host.docker.internal:11434/rpc", "tools/list", "tools/call")
     ]
 
     try:
@@ -812,7 +809,7 @@ AGENT_CARD_PATH = os.path.join(AGENT_CARD_OUTPUT_DIR, "agent.json")
 # Environment variables or defaults
 AGENT_NAME = os.getenv("A2A_AGENT_NAME", "pyATS Agent")
 AGENT_DESCRIPTION = os.getenv("A2A_AGENT_DESCRIPTION", "Cisco pyATS Agent with access to many MCP tools")
-AGENT_HOST = os.getenv("A2A_AGENT_HOST", "ee30-70-53-207-50.ngrok-free.app")
+AGENT_HOST = os.getenv("A2A_AGENT_HOST", "90c8-70-49-67-159.ngrok-free.app")
 AGENT_PORT = os.getenv("A2A_AGENT_PORT", "10000")
 
 AGENT_URL = f"https://{AGENT_HOST}"
@@ -830,7 +827,8 @@ agent_card = {
     "capabilities": {
         "a2a": True,
         "tool-use": True,
-        "chat": True
+        "chat": True,
+        "push-notifications": True
     },
     "skills": []
 }
@@ -1156,8 +1154,6 @@ GENERAL RULES:
 - Use `create_drawing`, `update_drawing`, `export_to_json` only when the user wants a network diagram or visual model.
 - Do NOT export a drawing unless the user explicitly says so.
 
-
-
 🧜 MERMAID DIAGRAM TOOLS:
 - Use `mermaid_generate` ONLY when the user asks to create a PNG image from **Mermaid diagram code**.
   - **Purpose**: Converts Mermaid diagram code text into a PNG image file.
@@ -1167,9 +1163,10 @@ GENERAL RULES:
     - `backgroundColor` (string, optional): Background color for the generated PNG, e.g., white, transparent, #F0F0F0. Defaults to transparent or theme-based.
     - `name` (string): The filename for the generated PNG image (e.g., network_topology.png). **Required only if the tools environment is configured to save files to disk (CONTENT_IMAGE_SUPPORTED=false).**
     - `folder` (string): The absolute path *inside the container* where the image should be saved (e.g., /output). **Required only if the tools environment is configured to save files to disk (CONTENT_IMAGE_SUPPORTED=false).**
-  - **Behavior Note:** This tools behavior depends on the `CONTENT_IMAGE_SUPPORTED` environment variable of the running container.
+    - **Behavior Note:** This tools behavior depends on the `CONTENT_IMAGE_SUPPORTED` environment variable of the running container.
     - If `true` (default): The PNG image data is returned directly in the API response. `name` and `folder` parameters are ignored.
     - If `false`: The PNG image is saved to the specified `folder` with the specified `name`. The API response will contain the path to the saved file (e.g., /output/network_topology.png). `name` and `folder` parameters are **mandatory** in this mode.
+    - DO NOT call this tool with a raw text string. The diagram field must be a structured JSON object that includes children, connections, title, cloudProvider, and layoutDirection.
     
 🛠️ SERVICE NOW TOOLS:
 - ONLY use ServiceNow tools if the user explicitly says things like:
@@ -1369,12 +1366,21 @@ async def handle_tool_results(state: GraphState):
     context = state.get("context", {})
     run_mode = context.get("run_mode", "start")
 
+    # 🛠 Normalize tool messages: Fix any "model" role into "agent"
+    normalized_messages = []
+    for m in messages:
+        if isinstance(m, dict):
+            if m.get("role") == "model":
+                m["role"] = "agent"
+            normalized_messages.append(m)
+        else:
+            normalized_messages.append(m)
+
     # Always reset run_mode to prevent infinite loops unless LLM explicitly continues
     context["run_mode"] = "start"
 
-    # If assistant previously requested tool(s), allow assistant to assess next step
     return {
-        "messages": messages,
+        "messages": normalized_messages,
         "context": context,
         "__next__": "assistant"
     }

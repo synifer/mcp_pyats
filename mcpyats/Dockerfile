@@ -24,15 +24,15 @@ RUN echo "==? Install langgraph and required components" \
   && pip install --break-system-packages mcp \
   && pip install --break-system-packages google-generativeai
 
-RUN echo "==? Docker" \
-RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-RUN apt-get update && apt-get install -y docker-ce-cli
+# ✅ Install Docker CLI (not full daemon)
+RUN apt-get update && \
+    apt-get install -y docker.io && \
+    rm -rf /var/lib/apt/lists/*
+
 
 RUN pip install --break-system-packages --upgrade "langgraph>=0.0.45"
 
-COPY . /selectorplus/
+COPY . .
 
 COPY ./scripts /scripts/
 

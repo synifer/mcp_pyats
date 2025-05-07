@@ -1,5 +1,21 @@
 ---
 devices:
+  Cat8000V:
+    alias: "Always On"
+    type: "router"
+    os: "iosxe"
+    platform: CSR1kv
+    credentials:
+      default:
+        username: admin
+        password: C1sco12345
+    connections:
+      cli:
+        protocol: ssh
+        ip: devnetsandboxiosxe.cisco.com
+        port: 22
+        arguments:
+          connection_timeout: 360
   R1:
     alias: "Sandbox Router01"
     type: "router"
