@@ -91,6 +91,7 @@
 
   // 6) Handle incoming RPC
   function handleMsg(payload) {
+    console.debug("[MCP-BRIDGE] got payload:", payload);
     const id     = payload.id   || payload.__event;
     let   method = payload.method;
     let   params = payload.params?.params || payload.params || {};
@@ -101,8 +102,12 @@
 
       // 1) JSON‐string under input?
       if (typeof raw.input === "string") {
-        try { params = JSON.parse(raw.input) }
-        catch { params = {} }
+        try {
+          params = JSON.parse(raw.input);
+        } catch (err) {
+          // fallback to treating the entire string as your label
+          params = { text: raw.input };
+        }
       }
       // 2) Legacy __arg1?
       else if (typeof raw.__arg1 === "string") {
@@ -161,7 +166,7 @@
       try {
         const cell = graph.insertVertex(parent, null, txt, x, y, w, h, sty);
         graph.orderCells(true, [cell]);
-        graph.scrollCellToVisible(cell, true);
+        graph.scrollCellToVisible(cell, false);
         graph.setSelectionCell(cell);
         sendReply(id, { success: true, cellId: cell.id });
       } catch (e) {

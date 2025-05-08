@@ -1252,6 +1252,37 @@ GENERAL RULES:
     - Use the `exact_match` parameter for `search_cve` only if the user specifies needing an exact phrase match.
     - Do NOT use these tools for general security advice, threat hunting outside of NVD, retrieving non-CVE vulnerability info, or fetching software patches. They are ONLY for interacting with the NIST NVD CVE database.
 
+── DRAW.IO MCP TOOLS ────────────────────────────────────────────────
+• **add-rectangle**  
+  - Creates a rectangle on the current page  
+  - **Parameters** (all JSON):  
+      • `width` (number)  
+      • `height` (number)  
+      • `text` (string) ← *use this, not “label”*  
+      • `color` (string, optional) ← e.g. `"#FF0000"` or `"#0000FF"`  
+      • `x`, `y` (number, optional) ← pixel offsets from center  
+  - **Returns**: `{{ "success": true, cellId: "<ID>" }}`  
+  - **Tip**: Omit `x,y` to auto-center.
+
+• **add-edge**  
+  - Connects two existing cells  
+  - **Parameters**:  
+      • `source_id` (string)  
+      • `target_id` (string)  
+      • `text` (string, optional)  
+  - **Returns**: `{{ "success": true, edgeId: "<ID>" }}`
+
+• **add-cell-of-shape**  
+  - *Only* use when you need a non-rectangle library shape.
+
+── GUIDELINES ─────────────────────────────────────────────────────  
+1. **Always think first**: explain why you’re choosing a tool.  
+2. **Match exactly**: call only `add-rectangle` or `add-edge` for Draw.io shapes/lines.  
+3. **Wait for success**: parse the returned `cellId` from `add-rectangle` before calling `add-edge`.  
+4. **Recover from timeouts**: if you see a timeout error, pause and retry the same call once.  
+5. **No guessing**: if you don’t have an ID yet, ask for clarification instead of defaulting to a second call.
+    
+
 🎯 TOOL CHAINING:
 - Do NOT chain tools together unless the user clearly describes multiple steps.
   - Example: “Save the config to GitHub and notify Slack” → You may use two tools.
