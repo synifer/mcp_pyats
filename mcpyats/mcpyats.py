@@ -1253,35 +1253,64 @@ GENERAL RULES:
     - Do NOT use these tools for general security advice, threat hunting outside of NVD, retrieving non-CVE vulnerability info, or fetching software patches. They are ONLY for interacting with the NIST NVD CVE database.
 
 ── DRAW.IO MCP TOOLS ────────────────────────────────────────────────
-• **add-rectangle**  
-  - Creates a rectangle on the current page  
-  - **Parameters** (all JSON):  
-      • `width` (number)  
-      • `height` (number)  
-      • `text` (string) ← *use this, not “label”*  
-      • `color` (string, optional) ← e.g. `"#FF0000"` or `"#0000FF"`  
-      • `x`, `y` (number, optional) ← pixel offsets from center  
-  - **Returns**: `{{ "success": true, cellId: "<ID>" }}`  
-  - **Tip**: Omit `x,y` to auto-center.
 
-• **add-edge**  
-  - Connects two existing cells  
-  - **Parameters**:  
-      • `source_id` (string)  
-      • `target_id` (string)  
-      • `text` (string, optional)  
-  - **Returns**: `{{ "success": true, edgeId: "<ID>" }}`
+• add-rectangle
+Creates a standard rectangle shape on the current page.
+Parameters (JSON):
+- text (string) – Label displayed inside the rectangle
+- width (number) – Width in pixels
+- height (number) – Height in pixels
+- color (string, optional) – Fill color (e.g., "#FF0000" or "#0000FF")
+- x (number, optional) – X offset from center
+- y (number, optional) – Y offset from center
+Returns:
+{{ "success": true, "cellId": "<ID>" }}
+Tip: Omit x and y to center the shape automatically.
 
-• **add-cell-of-shape**  
-  - *Only* use when you need a non-rectangle library shape.
+• add-edge
+Connects two existing cells with a labeled directional connector.
+Parameters (JSON):
+- source_id (string) – ID of the starting cell
+- target_id (string) – ID of the ending cell
+- text (string, optional) – Optional label for the edge
+Returns:
+{{ "success": true, "edgeId": "<ID>" }}
+
+• add-cell-of-shape
+Inserts a shape from the Draw.io library (used for non-rectangle components).
+Parameters (JSON):
+- shape_name (string) – Name of the shape (e.g., "Router", "Cloud")
+- x, y (number) – Coordinates
+- width, height (number) – Dimensions
+Returns:
+{{ "success": true, "cellId": "<ID>" }}
+
+• get-all-cells-detailed
+Retrieves every object on the canvas including all shapes, edges, interface labels, VLAN annotations, and floating text.
+Parameters:
+None
+Returns:
+An array of cell objects. Each includes:
+- id: Unique Draw.io cell ID
+- type: "vertex" for shapes, "edge" for connectors
+- text: Extracted human-readable label (from value, label, or content)
+- parsedLines: Array of individual text lines split from the label
+- rawValue: The original .value (if a string), otherwise null
+- attributes: All XML attributes on the node (if present)
+- style: Style string used by Draw.io (e.g., fillColor, shape, endArrow)
+- geometry: Object: {{ x, y, width, height }}
+- vertex: Boolean flag: true if this is a shape
+- edge: Boolean flag: true if this is a connector
+- parent: ID of the parent group/layer (usually "1")
+- source: ID of the source cell (only for edges)
+- target: ID of the target cell (only for edges)
 
 ── GUIDELINES ─────────────────────────────────────────────────────  
 1. **Always think first**: explain why you’re choosing a tool.  
 2. **Match exactly**: call only `add-rectangle` or `add-edge` for Draw.io shapes/lines.  
 3. **Wait for success**: parse the returned `cellId` from `add-rectangle` before calling `add-edge`.  
 4. **Recover from timeouts**: if you see a timeout error, pause and retry the same call once.  
-5. **No guessing**: if you don’t have an ID yet, ask for clarification instead of defaulting to a second call.
-    
+5. **No guessing**: if you don’t have an ID yet, ask for clarification instead of defaulting to a second call.   
 
 🎯 TOOL CHAINING:
 - Do NOT chain tools together unless the user clearly describes multiple steps.

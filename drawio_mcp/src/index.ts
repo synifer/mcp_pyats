@@ -1,278 +1,3 @@
-// import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-// import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-// import { z } from "zod";
-// import Fastify, { FastifyRequest, FastifyReply } from "fastify";
-
-// import EventEmitter from "node:events";
-// import uWS from "uWebSockets.js";
-// import fs from "fs";
-// import path from "path";
-
-// import {
-//   bus_reply_stream,
-//   bus_request_stream,
-//   Context,
-// } from "./types.js";
-// import { create_bus } from "./emitter_bus.js";
-// import { default_tool } from "./tool.js";
-// import { nanoid_id_generator } from "./nanoid_id_generator.js";
-// import { create_logger } from "./mcp_console_logger.js";
-
-// const log = create_logger();
-// const emitter = new EventEmitter();
-// const bus = create_bus(log)(emitter);
-// const id_generator = nanoid_id_generator();
-
-// const context: Context = {
-//   bus,
-//   id_generator,
-//   log,
-//   emitter
-// };
-
-// interface JsonRpcRequest {
-//   jsonrpc: string;
-//   method: string;
-//   id: string;
-//   params?: Record<string, any>;
-// }
-
-// const fastify = Fastify();
-// fastify.post("/rpc", async (request: FastifyRequest, reply: FastifyReply) => {
-//   const json = request.body as JsonRpcRequest;
-
-//   if (!json || !json.id) {
-//     return reply.status(400).send({ error: "Missing ID in payload" });
-//   }
-
-//   // ✅ Handle tools/list directly
-//   if (json.method === "tools/list") {
-//     const tools = server.tools().map((tool: any) => ({
-//       name: tool.name,
-//       description: tool.description,
-//       parameters: tool.schema?.properties || {},
-//     }));
-  
-//     return reply.send({
-//       jsonrpc: "2.0",
-//       id: json.id,
-//       result: tools,
-//     });
-//   }
-
-//   // ✅ Handle tools/call by forwarding to browser via WebSocket
-//   if (json.method === "tools/call") {
-//     return new Promise((resolve) => {
-//       const timeout = setTimeout(() => {
-//         resolve({
-//           jsonrpc: "2.0",
-//           id: json.id,
-//           error: { code: -32000, message: "Timeout waiting for tool response" },
-//         });
-//       }, 5000);
-  
-//       emitter.once(bus_reply_stream, (response) => {
-//         if (response.id === json.id) {
-//           clearTimeout(timeout);
-//           resolve(response);
-//         }
-//       });
-  
-//       emitter.emit(bus_request_stream, json);
-//     });
-//   }
-
-//   // 🔄 For all other methods, forward like normal
-//   return new Promise((resolve, reject) => {
-//     const timeout = setTimeout(() => {
-//       reject({
-//         jsonrpc: "2.0",
-//         id: json.id,
-//         error: { code: -32001, message: "Unhandled method" },
-//       });
-//     }, 5000);
-
-//     emitter.once(bus_reply_stream, (response) => {
-//       if (response.id === json.id) {
-//         clearTimeout(timeout);
-//         resolve(response);
-//       }
-//     });
-
-//     emitter.emit(bus_request_stream, json);
-//   });
-// });
-
-// fastify.listen({ port: 11434, host: '0.0.0.0' }, () => {
-//   log.debug("🌐 HTTP POST /rpc listening on 0.0.0.0:11434");
-// });
-
-// // Create MCP Server instance
-// const server = new McpServer({
-//   name: "drawio-mcp-server",
-//   version: "1.0.0",
-//   capabilities: {
-//     tools: {},
-//     resources: {},
-//   },
-// });
-
-// // Register tools
-// server.tool(
-//   "get-selected-cell",
-//   "Get the currently selected diagram cell (vertex or edge).",
-//   {},
-//   default_tool("get-selected-cell", context),
-// );
-
-// server.tool(
-//   "add-rectangle",
-//   "Add a labeled rectangle shape to the diagram.",
-//   {
-//     x: z.number().optional().default(100),
-//     y: z.number().optional().default(100),
-//     width: z.number().optional().default(200),
-//     height: z.number().optional().default(100),
-//     text: z.string().optional().default("New Cell"),
-//     style: z.string().optional().default("whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;")
-//   },
-//   default_tool("add-rectangle", context),
-// );
-
-// server.tool(
-//   "add-edge",
-//   "Create a connector (edge) between two diagram elements.",
-//   {
-//     source_id: z.string(),
-//     target_id: z.string(),
-//     text: z.string().optional().default(""),
-//     style: z.string().optional().default("edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;")
-//   },
-//   default_tool("add-edge", context),
-// );
-
-// server.tool(
-//   "delete-cell-by-id",
-//   "Delete a diagram cell (vertex or edge) by its ID.",
-//   {
-//     cell_id: z.string()
-//   },
-//   default_tool("delete-cell-by-id", context),
-// );
-
-// server.tool(
-//   "get-shape-categories",
-//   "List all available shape categories.",
-//   {},
-//   default_tool("get-shape-categories", context),
-// );
-
-// server.tool(
-//   "get-shapes-in-category",
-//   "List all shapes within a specific shape category.",
-//   {
-//     category_id: z.string()
-//   },
-//   default_tool("get-shapes-in-category", context),
-// );
-
-// server.tool(
-//   "get-shape-by-name",
-//   "Retrieve a specific shape by name.",
-//   {
-//     shape_name: z.string()
-//   },
-//   default_tool("get-shape-by-name", context),
-// );
-
-// server.tool(
-//   "add-cell-of-shape",
-//   "Add a new shape-based vertex to the diagram.",
-//   {
-//     shape_name: z.string(),
-//     x: z.number().optional().default(100),
-//     y: z.number().optional().default(100),
-//     width: z.number().optional().default(200),
-//     height: z.number().optional().default(100),
-//     text: z.string().optional().default(""),
-//     style: z.string().optional().default("whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;")
-//   },
-//   default_tool("add-cell-of-shape", context),
-// );
-
-// // WebSocket forwarder to browser
-// const conns: uWS.WebSocket<unknown>[] = [];
-// const ws_handler: uWS.WebSocketBehavior<unknown> = {
-//   open: (ws) => {
-//     log.debug("[ws] 🔗 New WebSocket connection established");
-//     conns.push(ws);
-//   },
-//   close: (ws) => {
-//     const index = conns.indexOf(ws);
-//     if (index !== -1) conns.splice(index, 1);
-//     log.debug("[ws] 🔌 WebSocket disconnected");
-//   },
-//   message: (ws, message) => {
-//     const decoded = new TextDecoder().decode(message);
-//     try {
-//       const json = JSON.parse(decoded);
-//       log.debug("[ws] 📥 Received WebSocket message:", json);
-  
-//       // ✅ Handle client-ready separately
-//       if (json.method === "client-ready") {
-//         log.debug("[ws] ✅ Client confirmed ready");
-//         return; // Don't forward to reply bus
-//       }
-  
-//       // ✅ Forward real replies only
-//       emitter.emit(bus_reply_stream, json);
-//       // Inside the ws.message handler, after parsing the JSON:
-//       if (json.id && json.result) {
-//         const filePath = path.join("/tmp", `mcp-response-${json.id}.json`);
-//         fs.writeFileSync(filePath, JSON.stringify(json));
-//         log.debug(`[relay] 📝 Wrote reply to ${filePath}`);
-//       }
-//     } catch (err) {
-//       log.debug("[ws] ❌ Invalid WebSocket JSON:", err);
-//     }
-//   }
-// };
-
-// const app = uWS.App().ws("/*", ws_handler).listen(3000, (token) => {
-//   if (token) log.debug("🚀 WebSocket server listening on port 3000");
-//   else {
-//     log.debug("❌ Failed to start WebSocket server");
-//     process.exit(1);
-//   }
-// });
-
-// emitter.on(bus_request_stream, (event: any) => {
-//   log.debug(`[bridge] 📤 Forwarding request to browser via WebSocket`, event);
-//   const msg = JSON.stringify(event);
-//   conns.forEach((ws, i) => {
-//     try {
-//       ws.send(msg);
-//     } catch (e) {
-//       log.debug(`[bridge] ❌ Error sending to client ${i}:`, e);
-//     }
-//   });
-// });
-
-// async function main() {
-//   // Start STDIO transport for MCP
-//   const transport = new StdioServerTransport();
-//   await server.connect(transport);
-//   log.debug("✅ Draw.io MCP Server running on STDIO");
-
-//   // 🛑 Keep the process alive (optional, but prevents accidental exit)
-//   process.stdin.resume(); // prevents Node from exiting
-// }
-
-// main().catch((err) => {
-//   log.debug("❌ Fatal error in MCP server:", err);
-//   process.exit(1);
-// });
-
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -336,7 +61,7 @@ fastify.post("/rpc", async (request: FastifyRequest, reply: FastifyReply) => {
           id: json.id,
           error: { code: -32000, message: "Timeout waiting for tool response" },
         });
-      }, 5000);
+      }, 25000);
       emitter.once(bus_reply_stream, (response) => {
         if (response.id === json.id) {
           clearTimeout(timeout);
@@ -395,6 +120,18 @@ registerTool("delete-cell-by-id", "Delete a diagram cell.", { cell_id: z.string(
 registerTool("get-shape-categories", "List all shape categories.", {}, default_tool("get-shape-categories", context));
 registerTool("get-shapes-in-category", "List shapes in a category.", { category_id: z.string() }, default_tool("get-shapes-in-category", context));
 registerTool("get-shape-by-name", "Get shape by name.", { shape_name: z.string() }, default_tool("get-shape-by-name", context));
+registerTool(
+  "get-all-cells-detailed",
+  "Returns all shapes from the current diagram.",
+  {}, // no parameters
+  default_tool("get-all-cells-detailed", context)
+);
+registerTool(
+  "get-edge-labels",
+  "Returns edges from the current diagram.",
+  {}, // no parameters
+  default_tool("get-edge-labels", context)
+);
 registerTool("add-cell-of-shape", "Add shape-based vertex.", {
   shape_name: z.string(),
   x: z.number().optional().default(100),

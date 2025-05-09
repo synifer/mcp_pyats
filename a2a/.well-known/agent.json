@@ -178,6 +178,16 @@
       "description": "Get shape by name. (Note: Accepts simplified input)"
     },
     {
+      "id": "get-all-cells-detailed",
+      "name": "get-all-cells-detailed",
+      "description": "Returns all shapes from the current diagram. (Note: Accepts simplified input)"
+    },
+    {
+      "id": "get-edge-labels",
+      "name": "get-edge-labels",
+      "description": "Returns edges from the current diagram. (Note: Accepts simplified input)"
+    },
+    {
       "id": "add-cell-of-shape",
       "name": "add-cell-of-shape",
       "description": "Add shape-based vertex. (Note: Accepts simplified input)"
