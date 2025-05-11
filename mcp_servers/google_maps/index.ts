@@ -120,7 +120,7 @@ const MAPS_TOOLS = [
   ELEVATION_TOOL,
 ] as const;
 
-console.log("✅ Schema definitions complete");
+console.error("✅ Schema definitions complete");
 
 // API handlers (using zod to validate responses)
 async function handleGeocode(address: string) {
@@ -235,9 +235,9 @@ const server = new Server(
   },
 );
 
-console.log("✅ Server initialized");
+console.error("✅ Server initialized");
 
-console.log("🔧 Registering list_tools handler...");
+console.error("🔧 Registering list_tools handler...");
 
 
 // Modify the server initialization
@@ -254,9 +254,9 @@ const mcpServer = new Server(
   },
 );
 
-console.log("✅ Server initialized");
+console.error("✅ Server initialized");
 
-console.log("🔧 Registering list_tools handler...");
+console.error("🔧 Registering list_tools handler...");
 
 // Set up request handlers
 mcpServer.setRequestHandler(ListToolsRequestSchema, async (request) => {
@@ -291,11 +291,11 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async (request) => {
   }
 });
 
-console.log("🔧 Registering call_tool handler...");
+console.error("🔧 Registering call_tool handler...");
 
 mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-  console.log("📩 Received call_tool request:", JSON.stringify(request, null, 2));
-  console.log("Request Arguments: ", JSON.stringify(request.params.arguments));
+  console.error("📩 Received call_tool request:", JSON.stringify(request, null, 2));
+  console.error("Request Arguments: ", JSON.stringify(request.params.arguments));
   try {
     switch (request.params.name) {
       case "maps_geocode": {
@@ -349,13 +349,13 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-console.log("✅ Successfully registered call_tool handler.");
+console.error("✅ Successfully registered call_tool handler.");
 
 async function runServer() {
-  console.log("🚀 Starting Google Maps MCP Server...");
+  console.error("🚀 Starting Google Maps MCP Server...");
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
-  console.log("✅ Google Maps MCP Server running on stdio");
+  console.error("✅ Google Maps MCP Server running on stdio");
   process.stderr.write("✅ Server ready to process requests\n");
 }
 

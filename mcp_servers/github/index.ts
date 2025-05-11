@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-console.log("🚀 Server starting...");
+console.error("🚀 Server starting...");
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -43,7 +43,7 @@ const CallToolRequestSchema = z.object({
   id: z.union([z.string(), z.number()]),
 });
 
-console.log("✅ Schema definitions complete");
+console.error("✅ Schema definitions complete");
 
 const server = new Server(
   {
@@ -57,7 +57,7 @@ const server = new Server(
   }
 );
 
-console.log("✅ Server initialized");
+console.error("✅ Server initialized");
 
 function formatGitHubError(error: GitHubError): string {
   let message = `GitHub API Error: ${error.message}`;
@@ -82,9 +82,9 @@ function formatGitHubError(error: GitHubError): string {
   return message;
 }
 
-console.log("🔧 Registering list_tools handler...");
+console.error("🔧 Registering list_tools handler...");
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  console.log("📩 Received list_tools request");
+  console.error("📩 Received list_tools request");
   return {
     tools: [
       {
@@ -220,11 +220,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     ],
   };
 });
-console.log("✅ Successfully registered list_tools handler.");
+console.error("✅ Successfully registered list_tools handler.");
 
-console.log("🔧 Registering call_tool handler...");
+console.error("🔧 Registering call_tool handler...");
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  console.log("📩 Received call_tool request:", JSON.stringify(request, null, 2));
+  console.error("📩 Received call_tool request:", JSON.stringify(request, null, 2));
   try {
     if (!request.params.arguments) {
       throw new Error("Arguments are required");
@@ -494,7 +494,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw error;
   }
 });
-console.log("✅ Successfully registered call_tool handler.");
+console.error("✅ Successfully registered call_tool handler.");
 
 async function runServer() {
   const transport = new StdioServerTransport();
