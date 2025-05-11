@@ -95,6 +95,10 @@ echo "Building nist-mcp image..."
 docker build -t nist-mcp ./mcp_servers/nist
 echo "nist-mcp image built successfully"
 
+echo "Building subnet-calculator-mcp image..."
+docker build -t subnet-calculator-mcp ./mcp_servers/subnet_calculator
+echo "subnet-calculator-mcp image built successfully"
+
 echo "Building drawio-mcp image..."
 docker build -t drawio-mcp ./mcp_servers/drawio_mcp
 echo "drawio-mcp image built successfully"
@@ -207,6 +211,10 @@ docker run -dit \
   --dns 8.8.8.8 \
   nist-mcp 
 echo "nist-mcp container started."
+
+echo "Starting subnet-calculator-mcp container..."
+docker run -dit --name subnet-calculator-mcp subnet-calculator-mcp
+echo "subnet-calculator-mcp container started."
 
 echo "Starting drawio-mcp container..."
 docker run -dit --name drawio-mcp -p 3000:3000 -p 11434:11434 drawio-mcp

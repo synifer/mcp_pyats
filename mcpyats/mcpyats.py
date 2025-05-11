@@ -731,7 +731,8 @@ async def load_all_tools():
         ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
         ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),    
         ("nist-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("drawio-mcp", "http://host.docker.internal:11434/rpc", "tools/list", "tools/call")
+        ("drawio-mcp", "http://host.docker.internal:11434/rpc", "tools/list", "tools/call"),
+        ("subnet-calculator-mcp", ["python3", "main.py", "--oneshot"], "tools/discover", "tools/call")
     ]
 
     try:
@@ -1304,6 +1305,32 @@ An array of cell objects. Each includes:
 - parent: ID of the parent group/layer (usually "1")
 - source: ID of the source cell (only for edges)
 - target: ID of the target cell (only for edges)
+
+🧮 SUBNET CALCULATOR TOOL
+Use the calculate_subnet tool only when the user asks for subnetting information or IP network calculations based on a given CIDR notation (e.g., 192.168.1.0/24).
+
+✅ Trigger Examples:
+“Calculate the subnet details for 10.0.0.0/16”
+“Give me the network, broadcast, and usable IPs for 192.168.10.0/24”
+“How many usable hosts are in 172.16.0.0/20?”
+“Show me the usable host range for 192.168.100.0/25”
+
+🔧 Tool Parameters:
+cidr (string): A valid CIDR block in the format IP/Mask, e.g., 192.168.1.0/24.
+
+📦 Output Includes:
+network_address: Base network address
+broadcast_address: Broadcast address for the subnet
+netmask: Subnet mask in dotted-decimal format
+wildcard_mask: Wildcard mask (inverted netmask)
+usable_host_range: First to last usable host IPs (if applicable)
+number_of_usable_hosts: Total count of usable IPs
+
+🚫 Do NOT use this tool:
+Without a valid CIDR input
+For converting host IPs, MAC addresses, or general networking explanations
+To validate subnets that are not CIDR formatted
+
 
 ── GUIDELINES ─────────────────────────────────────────────────────  
 1. **Always think first**: explain why you’re choosing a tool.  
