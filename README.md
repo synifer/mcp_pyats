@@ -498,6 +498,9 @@ The `mcp_servers/` directory houses all modular MCP-compliant tool servers. Each
 - `slack` – Post messages or react to threads in Slack  
   → [./mcp_servers/slack/README.md](./mcp_servers/slack/README.md)
 
+- `subnet-calculator` – Calculate subnets from a CIDR notation IP 
+  → [./mcp_servers/slack/README.md](./mcp_servers/subnet_calculator/README.md)  
+
 Each server folder includes a `Dockerfile` and a `server.py` or `index.ts` (depending on language/runtime) that defines the available tools and communication logic.
 
 ## 🔄 A2A Adapter – Agent-to-Agent Interface for MCPyATS
@@ -808,6 +811,15 @@ The following MCP containers are launched in the background and made available t
 | Mermaid               |                    | `mermaid-mcp`           | Render Mermaid syntax diagrams       |
 | RFC                   |                    | `rfc-mcp`               | Retrieve IETF RFCs                   |
 | NIST NVD              |                    | `nist-mcp`              | Vulnerability and CVE data           |
+| Subnet Calculator     |                    | `subnet-calculator-mcp` | Calculates subnet info from CIDR IP  |
+| Excalidraw            |                    | `excalidraw-mcp`        | Generate freeform drawings           |
+| GitHub                |                    | `github-mcp`            | Interact with GitHub repositories    |
+| Slack                 |                    | `slack-mcp`             | Post messages to Slack               |
+| Google Maps           |                    | `google-maps-mcp`       | Geocoding and location data          |
+| AbuseIPDB             |                    | `abuseipdb-mcp`         | Query IP reputation                   |
+| Selector AI           |                    | `selector-ai-mcp`       | AI-based selector for data           |
+| Sequential Thinking   |                    | `sequentialthinking-mcp`| Logical task planning                 |
+---------------------------------------------------------------------------------------------------------------
 
 ---
 
