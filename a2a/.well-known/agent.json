@@ -2,10 +2,10 @@
   "name": "pyATS Agent",
   "description": "Cisco pyATS Agent with access to many MCP tools",
   "version": "1.0",
-  "url": "https://90c8-70-49-67-159.ngrok-free.app",
-  "endpoint": "https://90c8-70-49-67-159.ngrok-free.app",
+  "url": "https://4f8a-69-156-133-54.ngrok-free.app",
+  "endpoint": "https://4f8a-69-156-133-54.ngrok-free.app",
   "methods": {
-    "send": "https://90c8-70-49-67-159.ngrok-free.app/"
+    "send": "https://4f8a-69-156-133-54.ngrok-free.app/"
   },
   "capabilities": {
     "a2a": true,
@@ -15,20 +15,682 @@
   },
   "skills": [
     {
-      "id": "calculate_subnet",
-      "name": "calculate_subnet",
-      "description": "Calculates network details for a given CIDR (e.g., 192.168.1.0/24).",
+      "id": "endpoints",
+      "name": "endpoints",
+      "description": "Fetch data for Endpoints from Cisco ISE.",
       "parameters": {
-        "properties": {
-          "cidr": {
-            "title": "Cidr",
-            "type": "string"
-          }
-        },
-        "required": [
-          "cidr"
-        ],
-        "title": "calculate_subnet_Input",
+        "properties": {},
+        "title": "endpoints_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "identity_groups",
+      "name": "identity_groups",
+      "description": "Fetch data for Identity Groups from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "identity_groups_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "id_store_sequences",
+      "name": "id_store_sequences",
+      "description": "Fetch data for ID Store Sequences from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "id_store_sequences_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "profiler_profiles",
+      "name": "profiler_profiles",
+      "description": "Fetch data for Profiler Profiles from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "profiler_profiles_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "internal_users",
+      "name": "internal_users",
+      "description": "Fetch data for Internal Users from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "internal_users_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "allowed_protocols",
+      "name": "allowed_protocols",
+      "description": "Fetch data for Allowed Protocols from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "allowed_protocols_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "admin_users",
+      "name": "admin_users",
+      "description": "Fetch data for Admin Users from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "admin_users_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "active_directory",
+      "name": "active_directory",
+      "description": "Fetch data for Active Directory from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "active_directory_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "authorization_profiles",
+      "name": "authorization_profiles",
+      "description": "Fetch data for Authorization Profiles from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "authorization_profiles_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "downloadable_acls",
+      "name": "downloadable_acls",
+      "description": "Fetch data for Downloadable ACLs from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "downloadable_acls_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "endpoint_groups",
+      "name": "endpoint_groups",
+      "description": "Fetch data for Endpoint Groups from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "endpoint_groups_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_devices",
+      "name": "network_devices",
+      "description": "Fetch data for Network Devices from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_devices_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_device_groups",
+      "name": "network_device_groups",
+      "description": "Fetch data for Network Device Groups from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_device_groups_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "nodes",
+      "name": "nodes",
+      "description": "Fetch data for Nodes from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "nodes_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "portals",
+      "name": "portals",
+      "description": "Fetch data for Portals from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "portals_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "sgts",
+      "name": "sgts",
+      "description": "Fetch data for SGTs from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "sgts_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "sgacls",
+      "name": "sgacls",
+      "description": "Fetch data for SGACLs from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "sgacls_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "self-reg_portals",
+      "name": "self-reg_portals",
+      "description": "Fetch data for Self-Reg Portals from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "self-reg_portals_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "sponsor_groups",
+      "name": "sponsor_groups",
+      "description": "Fetch data for Sponsor Groups from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "sponsor_groups_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "sponsor_portals",
+      "name": "sponsor_portals",
+      "description": "Fetch data for Sponsor Portals from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "sponsor_portals_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "sponsored_guest_portals",
+      "name": "sponsored_guest_portals",
+      "description": "Fetch data for Sponsored Guest Portals from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "sponsored_guest_portals_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "last_backup_status",
+      "name": "last_backup_status",
+      "description": "Fetch data for Last Backup Status from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "last_backup_status_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "certificate_signing_requests",
+      "name": "certificate_signing_requests",
+      "description": "Fetch data for Certificate Signing Requests from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "certificate_signing_requests_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "system_certificates",
+      "name": "system_certificates",
+      "description": "Fetch data for System Certificates from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "system_certificates_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "trusted_certificates",
+      "name": "trusted_certificates",
+      "description": "Fetch data for Trusted Certificates from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "trusted_certificates_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "deployment_nodes",
+      "name": "deployment_nodes",
+      "description": "Fetch data for Deployment Nodes from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "deployment_nodes_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "deployment_pan-ha",
+      "name": "deployment_pan-ha",
+      "description": "Fetch data for Deployment PAN-HA from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "deployment_pan-ha_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "node_interfaces",
+      "name": "node_interfaces",
+      "description": "Fetch data for Node Interfaces from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "node_interfaces_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "profiles",
+      "name": "profiles",
+      "description": "Fetch data for Profiles from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "profiles_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "license_system_connection_types",
+      "name": "license_system_connection_types",
+      "description": "Fetch data for License System Connection Types from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "license_system_connection_types_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "evaluation_licenses",
+      "name": "evaluation_licenses",
+      "description": "Fetch data for Evaluation Licenses from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "evaluation_licenses_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "feature_to_tier_mappings",
+      "name": "feature_to_tier_mappings",
+      "description": "Fetch data for Feature to Tier Mappings from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "feature_to_tier_mappings_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "license_registration",
+      "name": "license_registration",
+      "description": "Fetch data for License Registration from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "license_registration_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "smart_license_state",
+      "name": "smart_license_state",
+      "description": "Fetch data for Smart License State from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "smart_license_state_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "license_tier_state",
+      "name": "license_tier_state",
+      "description": "Fetch data for License Tier State from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "license_tier_state_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "patches",
+      "name": "patches",
+      "description": "Fetch data for Patches from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "patches_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "hotpatches",
+      "name": "hotpatches",
+      "description": "Fetch data for Hotpatches from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "hotpatches_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "repositories",
+      "name": "repositories",
+      "description": "Fetch data for Repositories from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "repositories_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "proxy_settings",
+      "name": "proxy_settings",
+      "description": "Fetch data for Proxy Settings from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "proxy_settings_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "telemetry_transport_gateway_settings",
+      "name": "telemetry_transport_gateway_settings",
+      "description": "Fetch data for Telemetry Transport Gateway Settings from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "telemetry_transport_gateway_settings_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "trustsec_sgacl_nbar_apps",
+      "name": "trustsec_sgacl_nbar_apps",
+      "description": "Fetch data for TrustSec SGACL NBAR Apps from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "trustsec_sgacl_nbar_apps_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_command_sets",
+      "name": "device_admin_command_sets",
+      "description": "Fetch data for Device Admin Command Sets from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_command_sets_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_conditions",
+      "name": "device_admin_conditions",
+      "description": "Fetch data for Device Admin Conditions from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_conditions_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_authentication_dictionaries",
+      "name": "device_admin_authentication_dictionaries",
+      "description": "Fetch data for Device Admin Authentication Dictionaries from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_authentication_dictionaries_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_authorization_dictionaries",
+      "name": "device_admin_authorization_dictionaries",
+      "description": "Fetch data for Device Admin Authorization Dictionaries from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_authorization_dictionaries_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_policy_set_dictionaries",
+      "name": "device_admin_policy_set_dictionaries",
+      "description": "Fetch data for Device Admin Policy Set Dictionaries from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_policy_set_dictionaries_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_identity_stores",
+      "name": "device_admin_identity_stores",
+      "description": "Fetch data for Device Admin Identity Stores from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_identity_stores_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_policy_sets",
+      "name": "device_admin_policy_sets",
+      "description": "Fetch data for Device Admin Policy Sets from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_policy_sets_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_service_names",
+      "name": "device_admin_service_names",
+      "description": "Fetch data for Device Admin Service Names from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_service_names_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "device_admin_shell_profiles",
+      "name": "device_admin_shell_profiles",
+      "description": "Fetch data for Device Admin Shell Profiles from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "device_admin_shell_profiles_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_authorization_profiles",
+      "name": "network_access_authorization_profiles",
+      "description": "Fetch data for Network Access Authorization Profiles from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_authorization_profiles_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_conditions",
+      "name": "network_access_conditions",
+      "description": "Fetch data for Network Access Conditions from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_conditions_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_authentication_conditions",
+      "name": "network_access_authentication_conditions",
+      "description": "Fetch data for Network Access Authentication Conditions from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_authentication_conditions_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_authorization_conditions",
+      "name": "network_access_authorization_conditions",
+      "description": "Fetch data for Network Access Authorization Conditions from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_authorization_conditions_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_policy_set_conditions",
+      "name": "network_access_policy_set_conditions",
+      "description": "Fetch data for Network Access Policy Set Conditions from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_policy_set_conditions_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_dictionaries",
+      "name": "network_access_dictionaries",
+      "description": "Fetch data for Network Access Dictionaries from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_dictionaries_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_authentication_dictionaries",
+      "name": "network_access_authentication_dictionaries",
+      "description": "Fetch data for Network Access Authentication Dictionaries from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_authentication_dictionaries_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_authorization_dictionaries",
+      "name": "network_access_authorization_dictionaries",
+      "description": "Fetch data for Network Access Authorization Dictionaries from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_authorization_dictionaries_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_policy_set_dictionaries",
+      "name": "network_access_policy_set_dictionaries",
+      "description": "Fetch data for Network Access Policy Set Dictionaries from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_policy_set_dictionaries_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_identity_stores",
+      "name": "network_access_identity_stores",
+      "description": "Fetch data for Network Access Identity Stores from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_identity_stores_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_policy_sets",
+      "name": "network_access_policy_sets",
+      "description": "Fetch data for Network Access Policy Sets from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_policy_sets_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_security_groups",
+      "name": "network_access_security_groups",
+      "description": "Fetch data for Network Access Security Groups from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_security_groups_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "network_access_service_names",
+      "name": "network_access_service_names",
+      "description": "Fetch data for Network Access Service Names from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "network_access_service_names_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "active_session_count",
+      "name": "active_session_count",
+      "description": "Fetch data for Active Session Count from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "active_session_count_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "posture_session_count",
+      "name": "posture_session_count",
+      "description": "Fetch data for Posture Session Count from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "posture_session_count_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "profiler_session_count",
+      "name": "profiler_session_count",
+      "description": "Fetch data for Profiler Session Count from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "profiler_session_count_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "version",
+      "name": "version",
+      "description": "Fetch data for Version from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "version_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "failure_reasons",
+      "name": "failure_reasons",
+      "description": "Fetch data for Failure Reasons from Cisco ISE.",
+      "parameters": {
+        "properties": {},
+        "title": "failure_reasons_Input",
         "type": "object"
       }
     }

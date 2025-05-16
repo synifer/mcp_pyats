@@ -714,25 +714,26 @@ async def load_all_tools():
     print("🚨 COMPREHENSIVE TOOL DISCOVERY STARTING 🚨")
 
     tool_services = [
-        ("pyats-mcp", ["python3", "pyats_mcp_server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("github-mcp", ["node", "dist/index.js"], "list_tools", "call_tool"),
-        ("google-maps-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("sequentialthinking-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("slack-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("excalidraw-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("filesystem-mcp", ["node", "/app/dist/index.js", "/projects"], "tools/list", "tools/call"),
-        ("netbox-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("google-search-mcp", ["node", "/app/build/index.js"], "tools/list", "tools/call"),
-        ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
-        ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
-        ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),    
-        ("nist-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        ("drawio-mcp", "http://host.docker.internal:11434/rpc", "tools/list", "tools/call"),
-        ("subnet-calculator-mcp", ["python3", "main.py", "--oneshot"], "tools/discover", "tools/call")
+        # ("pyats-mcp", ["python3", "pyats_mcp_server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("github-mcp", ["node", "dist/index.js"], "list_tools", "call_tool"),
+        # ("google-maps-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("sequentialthinking-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("slack-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("excalidraw-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("filesystem-mcp", ["node", "/app/dist/index.js", "/projects"], "tools/list", "tools/call"),
+        # ("netbox-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("google-search-mcp", ["node", "/app/build/index.js"], "tools/list", "tools/call"),
+        # ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
+        # ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
+        # ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        # ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),    
+        # ("nist-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        # ("drawio-mcp", "http://host.docker.internal:11434/rpc", "tools/list", "tools/call"),
+        # ("subnet-calculator-mcp", ["python3", "main.py", "--oneshot"], "tools/discover", "tools/call")
+        ("ise-mcp", ["python3", "main.py", "--oneshot"], "tools/discover", "tools/call")
     ]
 
     try:
@@ -780,7 +781,7 @@ async def load_all_tools():
                 page_content=f"Tool name: {tool.name}. Tool purpose: {tool.description}",
                 metadata={"tool_name": tool.name}
             )
-            for tool in local_tools if hasattr(tool, "description")
+            for tool in all_tools if hasattr(tool, "description")
         ]
         vector_store.add_documents(tool_documents)
 
@@ -810,7 +811,7 @@ AGENT_CARD_PATH = os.path.join(AGENT_CARD_OUTPUT_DIR, "agent.json")
 # Environment variables or defaults
 AGENT_NAME = os.getenv("A2A_AGENT_NAME", "pyATS Agent")
 AGENT_DESCRIPTION = os.getenv("A2A_AGENT_DESCRIPTION", "Cisco pyATS Agent with access to many MCP tools")
-AGENT_HOST = os.getenv("A2A_AGENT_HOST", "90c8-70-49-67-159.ngrok-free.app")
+AGENT_HOST = os.getenv("A2A_AGENT_HOST", "4f8a-69-156-133-54.ngrok-free.app")
 AGENT_PORT = os.getenv("A2A_AGENT_PORT", "10000")
 
 AGENT_URL = f"https://{AGENT_HOST}"
