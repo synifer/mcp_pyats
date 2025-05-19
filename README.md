@@ -214,8 +214,17 @@ EMAIL_PASSWORD=              # Password for the email account
 ```
 🛡️ NIST MCP
 ```env
+ISE_BASE=https://devnetsandboxise.cisco.com
+USERNAME=readonly
+PASSWORD=ISEisC00L
+```
+
+🛡️ ISE MCP
+```env
 NVD_API_KEY=                 # NIST NVD API key
 ```
+
+
 🔗 A2A Adapter
 ```env
 AGENT_CARD_OUTPUT_DIR=       # Path to save .well-known/agent.json
@@ -500,6 +509,10 @@ The `mcp_servers/` directory houses all modular MCP-compliant tool servers. Each
 
 - `subnet-calculator` – Calculate subnets from a CIDR notation IP 
   → [./mcp_servers/slack/README.md](./mcp_servers/subnet_calculator/README.md)  
+
+- `ise` – Cisco Identity Services Engine (ISE) integration for network access control 
+  → [./mcp_servers/slack/README.md](./mcp_servers/ise_mcp/README.md)  
+
 
 Each server folder includes a `Dockerfile` and a `server.py` or `index.ts` (depending on language/runtime) that defines the available tools and communication logic.
 
@@ -819,6 +832,7 @@ The following MCP containers are launched in the background and made available t
 | AbuseIPDB             |                    | `abuseipdb-mcp`         | Query IP reputation                   |
 | Selector AI           |                    | `selector-ai-mcp`       | AI-based selector for data           |
 | Sequential Thinking   |                    | `sequentialthinking-mcp`| Logical task planning                 |
+| Cisco Identity Services Engine   |                    | `ise-mcp`| ISE Operations                 |
 ---------------------------------------------------------------------------------------------------------------
 
 ---

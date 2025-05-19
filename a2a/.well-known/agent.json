@@ -15,109 +15,409 @@
   },
   "skills": [
     {
-      "id": "endpoints",
-      "name": "endpoints",
-      "description": "Fetch data for Endpoints from Cisco ISE.",
+      "id": "l3_get",
+      "name": "l3_get",
+      "description": "Query any ACI endpoint in the 'L3' group (52 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "endpoints_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "l3_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "identity_groups",
-      "name": "identity_groups",
-      "description": "Fetch data for Identity Groups from Cisco ISE.",
+      "id": "l2_get",
+      "name": "l2_get",
+      "description": "Query any ACI endpoint in the 'L2' group (13 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "identity_groups_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "l2_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "id_store_sequences",
-      "name": "id_store_sequences",
-      "description": "Fetch data for ID Store Sequences from Cisco ISE.",
+      "id": "fabric_get",
+      "name": "fabric_get",
+      "description": "Query any ACI endpoint in the 'Fabric' group (12 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "id_store_sequences_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "fabric_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "profiler_profiles",
-      "name": "profiler_profiles",
-      "description": "Fetch data for Profiler Profiles from Cisco ISE.",
+      "id": "access_policies_get",
+      "name": "access_policies_get",
+      "description": "Query any ACI endpoint in the 'Access Policies' group (6 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "profiler_profiles_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "access_policies_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "internal_users",
-      "name": "internal_users",
-      "description": "Fetch data for Internal Users from Cisco ISE.",
+      "id": "contracts_get",
+      "name": "contracts_get",
+      "description": "Query any ACI endpoint in the 'Contracts' group (13 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "internal_users_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "contracts_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "allowed_protocols",
-      "name": "allowed_protocols",
-      "description": "Fetch data for Allowed Protocols from Cisco ISE.",
+      "id": "bgp_get",
+      "name": "bgp_get",
+      "description": "Query any ACI endpoint in the 'BGP' group (10 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "allowed_protocols_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "bgp_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "admin_users",
-      "name": "admin_users",
-      "description": "Fetch data for Admin Users from Cisco ISE.",
+      "id": "interfaces_get",
+      "name": "interfaces_get",
+      "description": "Query any ACI endpoint in the 'Interfaces' group (27 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "admin_users_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "interfaces_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "active_directory",
-      "name": "active_directory",
-      "description": "Fetch data for Active Directory from Cisco ISE.",
+      "id": "access_control_get",
+      "name": "access_control_get",
+      "description": "Query any ACI endpoint in the 'Access Control' group (4 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "active_directory_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "access_control_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "authorization_profiles",
-      "name": "authorization_profiles",
-      "description": "Fetch data for Authorization Profiles from Cisco ISE.",
+      "id": "compute_get",
+      "name": "compute_get",
+      "description": "Query any ACI endpoint in the 'Compute' group (6 endpoints).",
       "parameters": {
-        "properties": {},
-        "title": "authorization_profiles_Input",
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "compute_get_Input",
         "type": "object"
       }
     },
     {
-      "id": "downloadable_acls",
-      "name": "downloadable_acls",
-      "description": "Fetch data for Downloadable ACLs from Cisco ISE.",
+      "id": "cdp_get",
+      "name": "cdp_get",
+      "description": "Query any ACI endpoint in the 'CDP' group (6 endpoints).",
+      "parameters": {
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "cdp_get_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "equipment_get",
+      "name": "equipment_get",
+      "description": "Query any ACI endpoint in the 'Equipment' group (25 endpoints).",
+      "parameters": {
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "equipment_get_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "lldp_get",
+      "name": "lldp_get",
+      "description": "Query any ACI endpoint in the 'LLDP' group (4 endpoints).",
+      "parameters": {
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "lldp_get_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "vpc_get",
+      "name": "vpc_get",
+      "description": "Query any ACI endpoint in the 'VPC' group (4 endpoints).",
+      "parameters": {
+        "properties": {
+          "endpoint": {
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "query_params": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query Params"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "vpc_get_Input",
+        "type": "object"
+      }
+    },
+    {
+      "id": "tenants",
+      "name": "tenants",
+      "description": "Query ACI endpoint: tenants",
       "parameters": {
         "properties": {},
-        "title": "downloadable_acls_Input",
+        "title": "tenants_Input",
         "type": "object"
       }
     },
     {
       "id": "endpoint_groups",
       "name": "endpoint_groups",
-      "description": "Fetch data for Endpoint Groups from Cisco ISE.",
+      "description": "Query ACI endpoint: endpoint_groups",
       "parameters": {
         "properties": {},
         "title": "endpoint_groups_Input",
@@ -125,572 +425,512 @@
       }
     },
     {
-      "id": "network_devices",
-      "name": "network_devices",
-      "description": "Fetch data for Network Devices from Cisco ISE.",
+      "id": "bridge_domains",
+      "name": "bridge_domains",
+      "description": "Query ACI endpoint: bridge_domains",
       "parameters": {
         "properties": {},
-        "title": "network_devices_Input",
+        "title": "bridge_domains_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_device_groups",
-      "name": "network_device_groups",
-      "description": "Fetch data for Network Device Groups from Cisco ISE.",
+      "id": "contexts",
+      "name": "contexts",
+      "description": "Query ACI endpoint: contexts",
       "parameters": {
         "properties": {},
-        "title": "network_device_groups_Input",
+        "title": "contexts_Input",
         "type": "object"
       }
     },
     {
-      "id": "nodes",
-      "name": "nodes",
-      "description": "Fetch data for Nodes from Cisco ISE.",
+      "id": "application_profiles",
+      "name": "application_profiles",
+      "description": "Query ACI endpoint: application_profiles",
       "parameters": {
         "properties": {},
-        "title": "nodes_Input",
+        "title": "application_profiles_Input",
         "type": "object"
       }
     },
     {
-      "id": "portals",
-      "name": "portals",
-      "description": "Fetch data for Portals from Cisco ISE.",
+      "id": "system",
+      "name": "system",
+      "description": "Query ACI endpoint: system",
       "parameters": {
         "properties": {},
-        "title": "portals_Input",
+        "title": "system_Input",
         "type": "object"
       }
     },
     {
-      "id": "sgts",
-      "name": "sgts",
-      "description": "Fetch data for SGTs from Cisco ISE.",
+      "id": "subnets",
+      "name": "subnets",
+      "description": "Query ACI endpoint: subnets",
       "parameters": {
         "properties": {},
-        "title": "sgts_Input",
+        "title": "subnets_Input",
         "type": "object"
       }
     },
     {
-      "id": "sgacls",
-      "name": "sgacls",
-      "description": "Fetch data for SGACLs from Cisco ISE.",
+      "id": "subnet_details",
+      "name": "subnet_details",
+      "description": "Query ACI endpoint: subnet_details",
       "parameters": {
         "properties": {},
-        "title": "sgacls_Input",
+        "title": "subnet_details_Input",
         "type": "object"
       }
     },
     {
-      "id": "self-reg_portals",
-      "name": "self-reg_portals",
-      "description": "Fetch data for Self-Reg Portals from Cisco ISE.",
+      "id": "leaf_switch_profiles",
+      "name": "leaf_switch_profiles",
+      "description": "Query ACI endpoint: leaf_switch_profiles",
       "parameters": {
         "properties": {},
-        "title": "self-reg_portals_Input",
+        "title": "leaf_switch_profiles_Input",
         "type": "object"
       }
     },
     {
-      "id": "sponsor_groups",
-      "name": "sponsor_groups",
-      "description": "Fetch data for Sponsor Groups from Cisco ISE.",
+      "id": "attachable_access_entity_profiles",
+      "name": "attachable_access_entity_profiles",
+      "description": "Query ACI endpoint: attachable_access_entity_profiles",
       "parameters": {
         "properties": {},
-        "title": "sponsor_groups_Input",
+        "title": "attachable_access_entity_profiles_Input",
         "type": "object"
       }
     },
     {
-      "id": "sponsor_portals",
-      "name": "sponsor_portals",
-      "description": "Fetch data for Sponsor Portals from Cisco ISE.",
+      "id": "physical_domains",
+      "name": "physical_domains",
+      "description": "Query ACI endpoint: physical_domains",
       "parameters": {
         "properties": {},
-        "title": "sponsor_portals_Input",
+        "title": "physical_domains_Input",
         "type": "object"
       }
     },
     {
-      "id": "sponsored_guest_portals",
-      "name": "sponsored_guest_portals",
-      "description": "Fetch data for Sponsored Guest Portals from Cisco ISE.",
+      "id": "qos_classes",
+      "name": "qos_classes",
+      "description": "Query ACI endpoint: qos_classes",
       "parameters": {
         "properties": {},
-        "title": "sponsored_guest_portals_Input",
+        "title": "qos_classes_Input",
         "type": "object"
       }
     },
     {
-      "id": "last_backup_status",
-      "name": "last_backup_status",
-      "description": "Fetch data for Last Backup Status from Cisco ISE.",
+      "id": "fault_summary",
+      "name": "fault_summary",
+      "description": "Query ACI endpoint: fault_summary",
       "parameters": {
         "properties": {},
-        "title": "last_backup_status_Input",
+        "title": "fault_summary_Input",
         "type": "object"
       }
     },
     {
-      "id": "certificate_signing_requests",
-      "name": "certificate_signing_requests",
-      "description": "Fetch data for Certificate Signing Requests from Cisco ISE.",
+      "id": "ip_addresses",
+      "name": "ip_addresses",
+      "description": "Query ACI endpoint: ip_addresses",
       "parameters": {
         "properties": {},
-        "title": "certificate_signing_requests_Input",
+        "title": "ip_addresses_Input",
         "type": "object"
       }
     },
     {
-      "id": "system_certificates",
-      "name": "system_certificates",
-      "description": "Fetch data for System Certificates from Cisco ISE.",
+      "id": "license_entitlements",
+      "name": "license_entitlements",
+      "description": "Query ACI endpoint: license_entitlements",
       "parameters": {
         "properties": {},
-        "title": "system_certificates_Input",
+        "title": "license_entitlements_Input",
         "type": "object"
       }
     },
     {
-      "id": "trusted_certificates",
-      "name": "trusted_certificates",
-      "description": "Fetch data for Trusted Certificates from Cisco ISE.",
+      "id": "interface_profiles",
+      "name": "interface_profiles",
+      "description": "Query ACI endpoint: interface_profiles",
       "parameters": {
         "properties": {},
-        "title": "trusted_certificates_Input",
+        "title": "interface_profiles_Input",
         "type": "object"
       }
     },
     {
-      "id": "deployment_nodes",
-      "name": "deployment_nodes",
-      "description": "Fetch data for Deployment Nodes from Cisco ISE.",
+      "id": "users",
+      "name": "users",
+      "description": "Query ACI endpoint: users",
       "parameters": {
         "properties": {},
-        "title": "deployment_nodes_Input",
+        "title": "users_Input",
         "type": "object"
       }
     },
     {
-      "id": "deployment_pan-ha",
-      "name": "deployment_pan-ha",
-      "description": "Fetch data for Deployment PAN-HA from Cisco ISE.",
+      "id": "security_domains",
+      "name": "security_domains",
+      "description": "Query ACI endpoint: security_domains",
       "parameters": {
         "properties": {},
-        "title": "deployment_pan-ha_Input",
+        "title": "security_domains_Input",
         "type": "object"
       }
     },
     {
-      "id": "node_interfaces",
-      "name": "node_interfaces",
-      "description": "Fetch data for Node Interfaces from Cisco ISE.",
+      "id": "health",
+      "name": "health",
+      "description": "Query ACI endpoint: health",
       "parameters": {
         "properties": {},
-        "title": "node_interfaces_Input",
+        "title": "health_Input",
         "type": "object"
       }
     },
     {
-      "id": "profiles",
-      "name": "profiles",
-      "description": "Fetch data for Profiles from Cisco ISE.",
+      "id": "controller_firmware_running",
+      "name": "controller_firmware_running",
+      "description": "Query ACI endpoint: controller_firmware_running",
       "parameters": {
         "properties": {},
-        "title": "profiles_Input",
+        "title": "controller_firmware_running_Input",
         "type": "object"
       }
     },
     {
-      "id": "license_system_connection_types",
-      "name": "license_system_connection_types",
-      "description": "Fetch data for License System Connection Types from Cisco ISE.",
+      "id": "wired_nodes_(infrawirednodes)",
+      "name": "wired_nodes_(infrawirednodes)",
+      "description": "Query ACI endpoint: wired_nodes_(infrawirednodes)",
       "parameters": {
         "properties": {},
-        "title": "license_system_connection_types_Input",
+        "title": "wired_nodes_(infrawirednodes)_Input",
         "type": "object"
       }
     },
     {
-      "id": "evaluation_licenses",
-      "name": "evaluation_licenses",
-      "description": "Fetch data for Evaluation Licenses from Cisco ISE.",
+      "id": "device_packages",
+      "name": "device_packages",
+      "description": "Query ACI endpoint: device_packages",
       "parameters": {
         "properties": {},
-        "title": "evaluation_licenses_Input",
+        "title": "device_packages_Input",
         "type": "object"
       }
     },
     {
-      "id": "feature_to_tier_mappings",
-      "name": "feature_to_tier_mappings",
-      "description": "Fetch data for Feature to Tier Mappings from Cisco ISE.",
+      "id": "arp_adjacency_endpoints",
+      "name": "arp_adjacency_endpoints",
+      "description": "Query ACI endpoint: arp_adjacency_endpoints",
       "parameters": {
         "properties": {},
-        "title": "feature_to_tier_mappings_Input",
+        "title": "arp_adjacency_endpoints_Input",
         "type": "object"
       }
     },
     {
-      "id": "license_registration",
-      "name": "license_registration",
-      "description": "Fetch data for License Registration from Cisco ISE.",
+      "id": "arp_database",
+      "name": "arp_database",
+      "description": "Query ACI endpoint: arp_database",
       "parameters": {
         "properties": {},
-        "title": "license_registration_Input",
+        "title": "arp_database_Input",
         "type": "object"
       }
     },
     {
-      "id": "smart_license_state",
-      "name": "smart_license_state",
-      "description": "Fetch data for Smart License State from Cisco ISE.",
+      "id": "arp_domain",
+      "name": "arp_domain",
+      "description": "Query ACI endpoint: arp_domain",
       "parameters": {
         "properties": {},
-        "title": "smart_license_state_Input",
+        "title": "arp_domain_Input",
         "type": "object"
       }
     },
     {
-      "id": "license_tier_state",
-      "name": "license_tier_state",
-      "description": "Fetch data for License Tier State from Cisco ISE.",
+      "id": "arp_entity",
+      "name": "arp_entity",
+      "description": "Query ACI endpoint: arp_entity",
       "parameters": {
         "properties": {},
-        "title": "license_tier_state_Input",
+        "title": "arp_entity_Input",
         "type": "object"
       }
     },
     {
-      "id": "patches",
-      "name": "patches",
-      "description": "Fetch data for Patches from Cisco ISE.",
+      "id": "arp_instances",
+      "name": "arp_instances",
+      "description": "Query ACI endpoint: arp_instances",
       "parameters": {
         "properties": {},
-        "title": "patches_Input",
+        "title": "arp_instances_Input",
         "type": "object"
       }
     },
     {
-      "id": "hotpatches",
-      "name": "hotpatches",
-      "description": "Fetch data for Hotpatches from Cisco ISE.",
+      "id": "fibre_channel_entities",
+      "name": "fibre_channel_entities",
+      "description": "Query ACI endpoint: fibre_channel_entities",
       "parameters": {
         "properties": {},
-        "title": "hotpatches_Input",
+        "title": "fibre_channel_entities_Input",
         "type": "object"
       }
     },
     {
-      "id": "repositories",
-      "name": "repositories",
-      "description": "Fetch data for Repositories from Cisco ISE.",
+      "id": "firmware_card_running",
+      "name": "firmware_card_running",
+      "description": "Query ACI endpoint: firmware_card_running",
       "parameters": {
         "properties": {},
-        "title": "repositories_Input",
+        "title": "firmware_card_running_Input",
         "type": "object"
       }
     },
     {
-      "id": "proxy_settings",
-      "name": "proxy_settings",
-      "description": "Fetch data for Proxy Settings from Cisco ISE.",
+      "id": "firmware_running",
+      "name": "firmware_running",
+      "description": "Query ACI endpoint: firmware_running",
       "parameters": {
         "properties": {},
-        "title": "proxy_settings_Input",
+        "title": "firmware_running_Input",
         "type": "object"
       }
     },
     {
-      "id": "telemetry_transport_gateway_settings",
-      "name": "telemetry_transport_gateway_settings",
-      "description": "Fetch data for Telemetry Transport Gateway Settings from Cisco ISE.",
+      "id": "endpoint_profile_containers",
+      "name": "endpoint_profile_containers",
+      "description": "Query ACI endpoint: endpoint_profile_containers",
       "parameters": {
         "properties": {},
-        "title": "telemetry_transport_gateway_settings_Input",
+        "title": "endpoint_profile_containers_Input",
         "type": "object"
       }
     },
     {
-      "id": "trustsec_sgacl_nbar_apps",
-      "name": "trustsec_sgacl_nbar_apps",
-      "description": "Fetch data for TrustSec SGACL NBAR Apps from Cisco ISE.",
+      "id": "locales",
+      "name": "locales",
+      "description": "Query ACI endpoint: locales",
       "parameters": {
         "properties": {},
-        "title": "trustsec_sgacl_nbar_apps_Input",
+        "title": "locales_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_command_sets",
-      "name": "device_admin_command_sets",
-      "description": "Fetch data for Device Admin Command Sets from Cisco ISE.",
+      "id": "bridge_domains_to_outside",
+      "name": "bridge_domains_to_outside",
+      "description": "Query ACI endpoint: bridge_domains_to_outside",
       "parameters": {
         "properties": {},
-        "title": "device_admin_command_sets_Input",
+        "title": "bridge_domains_to_outside_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_conditions",
-      "name": "device_admin_conditions",
-      "description": "Fetch data for Device Admin Conditions from Cisco ISE.",
+      "id": "epg_bridge_domain_links",
+      "name": "epg_bridge_domain_links",
+      "description": "Query ACI endpoint: epg_bridge_domain_links",
       "parameters": {
         "properties": {},
-        "title": "device_admin_conditions_Input",
+        "title": "epg_bridge_domain_links_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_authentication_dictionaries",
-      "name": "device_admin_authentication_dictionaries",
-      "description": "Fetch data for Device Admin Authentication Dictionaries from Cisco ISE.",
+      "id": "contract_consumers",
+      "name": "contract_consumers",
+      "description": "Query ACI endpoint: contract_consumers",
       "parameters": {
         "properties": {},
-        "title": "device_admin_authentication_dictionaries_Input",
+        "title": "contract_consumers_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_authorization_dictionaries",
-      "name": "device_admin_authorization_dictionaries",
-      "description": "Fetch data for Device Admin Authorization Dictionaries from Cisco ISE.",
+      "id": "context_source_relationships",
+      "name": "context_source_relationships",
+      "description": "Query ACI endpoint: context_source_relationships",
       "parameters": {
         "properties": {},
-        "title": "device_admin_authorization_dictionaries_Input",
+        "title": "context_source_relationships_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_policy_set_dictionaries",
-      "name": "device_admin_policy_set_dictionaries",
-      "description": "Fetch data for Device Admin Policy Set Dictionaries from Cisco ISE.",
+      "id": "domain_attachments",
+      "name": "domain_attachments",
+      "description": "Query ACI endpoint: domain_attachments",
       "parameters": {
         "properties": {},
-        "title": "device_admin_policy_set_dictionaries_Input",
+        "title": "domain_attachments_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_identity_stores",
-      "name": "device_admin_identity_stores",
-      "description": "Fetch data for Device Admin Identity Stores from Cisco ISE.",
+      "id": "path_attachments",
+      "name": "path_attachments",
+      "description": "Query ACI endpoint: path_attachments",
       "parameters": {
         "properties": {},
-        "title": "device_admin_identity_stores_Input",
+        "title": "path_attachments_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_policy_sets",
-      "name": "device_admin_policy_sets",
-      "description": "Fetch data for Device Admin Policy Sets from Cisco ISE.",
+      "id": "contract_providers",
+      "name": "contract_providers",
+      "description": "Query ACI endpoint: contract_providers",
       "parameters": {
         "properties": {},
-        "title": "device_admin_policy_sets_Input",
+        "title": "contract_providers_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_service_names",
-      "name": "device_admin_service_names",
-      "description": "Fetch data for Device Admin Service Names from Cisco ISE.",
+      "id": "bridge_domains_target_relationships",
+      "name": "bridge_domains_target_relationships",
+      "description": "Query ACI endpoint: bridge_domains_target_relationships",
       "parameters": {
         "properties": {},
-        "title": "device_admin_service_names_Input",
+        "title": "bridge_domains_target_relationships_Input",
         "type": "object"
       }
     },
     {
-      "id": "device_admin_shell_profiles",
-      "name": "device_admin_shell_profiles",
-      "description": "Fetch data for Device Admin Shell Profiles from Cisco ISE.",
+      "id": "contexts_target_relationships",
+      "name": "contexts_target_relationships",
+      "description": "Query ACI endpoint: contexts_target_relationships",
       "parameters": {
         "properties": {},
-        "title": "device_admin_shell_profiles_Input",
+        "title": "contexts_target_relationships_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_authorization_profiles",
-      "name": "network_access_authorization_profiles",
-      "description": "Fetch data for Network Access Authorization Profiles from Cisco ISE.",
+      "id": "function_policies",
+      "name": "function_policies",
+      "description": "Query ACI endpoint: function_policies",
       "parameters": {
         "properties": {},
-        "title": "network_access_authorization_profiles_Input",
+        "title": "function_policies_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_conditions",
-      "name": "network_access_conditions",
-      "description": "Fetch data for Network Access Conditions from Cisco ISE.",
+      "id": "attachable_access_entity_profiles_source_relationships",
+      "name": "attachable_access_entity_profiles_source_relationships",
+      "description": "Query ACI endpoint: attachable_access_entity_profiles_source_relationships",
       "parameters": {
         "properties": {},
-        "title": "network_access_conditions_Input",
+        "title": "attachable_access_entity_profiles_source_relationships_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_authentication_conditions",
-      "name": "network_access_authentication_conditions",
-      "description": "Fetch data for Network Access Authentication Conditions from Cisco ISE.",
+      "id": "spine_access_policy_groups",
+      "name": "spine_access_policy_groups",
+      "description": "Query ACI endpoint: spine_access_policy_groups",
       "parameters": {
         "properties": {},
-        "title": "network_access_authentication_conditions_Input",
+        "title": "spine_access_policy_groups_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_authorization_conditions",
-      "name": "network_access_authorization_conditions",
-      "description": "Fetch data for Network Access Authorization Conditions from Cisco ISE.",
+      "id": "wired_nodes_(topology)",
+      "name": "wired_nodes_(topology)",
+      "description": "Query ACI endpoint: wired_nodes_(topology)",
       "parameters": {
         "properties": {},
-        "title": "network_access_authorization_conditions_Input",
+        "title": "wired_nodes_(topology)_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_policy_set_conditions",
-      "name": "network_access_policy_set_conditions",
-      "description": "Fetch data for Network Access Policy Set Conditions from Cisco ISE.",
+      "id": "static_route_next_hop_policies",
+      "name": "static_route_next_hop_policies",
+      "description": "Query ACI endpoint: static_route_next_hop_policies",
       "parameters": {
         "properties": {},
-        "title": "network_access_policy_set_conditions_Input",
+        "title": "static_route_next_hop_policies_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_dictionaries",
-      "name": "network_access_dictionaries",
-      "description": "Fetch data for Network Access Dictionaries from Cisco ISE.",
+      "id": "route_policies",
+      "name": "route_policies",
+      "description": "Query ACI endpoint: route_policies",
       "parameters": {
         "properties": {},
-        "title": "network_access_dictionaries_Input",
+        "title": "route_policies_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_authentication_dictionaries",
-      "name": "network_access_authentication_dictionaries",
-      "description": "Fetch data for Network Access Authentication Dictionaries from Cisco ISE.",
+      "id": "lacp_entities",
+      "name": "lacp_entities",
+      "description": "Query ACI endpoint: lacp_entities",
       "parameters": {
         "properties": {},
-        "title": "network_access_authentication_dictionaries_Input",
+        "title": "lacp_entities_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_authorization_dictionaries",
-      "name": "network_access_authorization_dictionaries",
-      "description": "Fetch data for Network Access Authorization Dictionaries from Cisco ISE.",
+      "id": "lacp_instances",
+      "name": "lacp_instances",
+      "description": "Query ACI endpoint: lacp_instances",
       "parameters": {
         "properties": {},
-        "title": "network_access_authorization_dictionaries_Input",
+        "title": "lacp_instances_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_policy_set_dictionaries",
-      "name": "network_access_policy_set_dictionaries",
-      "description": "Fetch data for Network Access Policy Set Dictionaries from Cisco ISE.",
+      "id": "vmm_controller_profiles",
+      "name": "vmm_controller_profiles",
+      "description": "Query ACI endpoint: vmm_controller_profiles",
       "parameters": {
         "properties": {},
-        "title": "network_access_policy_set_dictionaries_Input",
+        "title": "vmm_controller_profiles_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_identity_stores",
-      "name": "network_access_identity_stores",
-      "description": "Fetch data for Network Access Identity Stores from Cisco ISE.",
+      "id": "vmm_domain_profiles",
+      "name": "vmm_domain_profiles",
+      "description": "Query ACI endpoint: vmm_domain_profiles",
       "parameters": {
         "properties": {},
-        "title": "network_access_identity_stores_Input",
+        "title": "vmm_domain_profiles_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_policy_sets",
-      "name": "network_access_policy_sets",
-      "description": "Fetch data for Network Access Policy Sets from Cisco ISE.",
+      "id": "vmm_provider_profiles",
+      "name": "vmm_provider_profiles",
+      "description": "Query ACI endpoint: vmm_provider_profiles",
       "parameters": {
         "properties": {},
-        "title": "network_access_policy_sets_Input",
+        "title": "vmm_provider_profiles_Input",
         "type": "object"
       }
     },
     {
-      "id": "network_access_security_groups",
-      "name": "network_access_security_groups",
-      "description": "Fetch data for Network Access Security Groups from Cisco ISE.",
+      "id": "vmm_user_profiles",
+      "name": "vmm_user_profiles",
+      "description": "Query ACI endpoint: vmm_user_profiles",
       "parameters": {
         "properties": {},
-        "title": "network_access_security_groups_Input",
-        "type": "object"
-      }
-    },
-    {
-      "id": "network_access_service_names",
-      "name": "network_access_service_names",
-      "description": "Fetch data for Network Access Service Names from Cisco ISE.",
-      "parameters": {
-        "properties": {},
-        "title": "network_access_service_names_Input",
-        "type": "object"
-      }
-    },
-    {
-      "id": "active_session_count",
-      "name": "active_session_count",
-      "description": "Fetch data for Active Session Count from Cisco ISE.",
-      "parameters": {
-        "properties": {},
-        "title": "active_session_count_Input",
-        "type": "object"
-      }
-    },
-    {
-      "id": "posture_session_count",
-      "name": "posture_session_count",
-      "description": "Fetch data for Posture Session Count from Cisco ISE.",
-      "parameters": {
-        "properties": {},
-        "title": "posture_session_count_Input",
-        "type": "object"
-      }
-    },
-    {
-      "id": "profiler_session_count",
-      "name": "profiler_session_count",
-      "description": "Fetch data for Profiler Session Count from Cisco ISE.",
-      "parameters": {
-        "properties": {},
-        "title": "profiler_session_count_Input",
-        "type": "object"
-      }
-    },
-    {
-      "id": "version",
-      "name": "version",
-      "description": "Fetch data for Version from Cisco ISE.",
-      "parameters": {
-        "properties": {},
-        "title": "version_Input",
-        "type": "object"
-      }
-    },
-    {
-      "id": "failure_reasons",
-      "name": "failure_reasons",
-      "description": "Fetch data for Failure Reasons from Cisco ISE.",
-      "parameters": {
-        "properties": {},
-        "title": "failure_reasons_Input",
+        "title": "vmm_user_profiles_Input",
         "type": "object"
       }
     }

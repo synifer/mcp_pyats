@@ -714,26 +714,28 @@ async def load_all_tools():
     print("🚨 COMPREHENSIVE TOOL DISCOVERY STARTING 🚨")
 
     tool_services = [
-        # ("pyats-mcp", ["python3", "pyats_mcp_server.py", "--oneshot"], "tools/discover", "tools/call"),
-        # ("github-mcp", ["node", "dist/index.js"], "list_tools", "call_tool"),
-        # ("google-maps-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        # ("sequentialthinking-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        # ("slack-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        # ("excalidraw-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        # ("filesystem-mcp", ["node", "/app/dist/index.js", "/projects"], "tools/list", "tools/call"),
-        # ("netbox-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        # ("google-search-mcp", ["node", "/app/build/index.js"], "tools/list", "tools/call"),
-        # ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        # ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
-        # ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        # ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
-        # ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        # ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
-        # ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),    
-        # ("nist-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
-        # ("drawio-mcp", "http://host.docker.internal:11434/rpc", "tools/list", "tools/call"),
-        # ("subnet-calculator-mcp", ["python3", "main.py", "--oneshot"], "tools/discover", "tools/call")
+        ("pyats-mcp", ["python3", "pyats_mcp_server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("github-mcp", ["node", "dist/index.js"], "list_tools", "call_tool"),
+        ("google-maps-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        ("sequentialthinking-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        ("slack-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        ("excalidraw-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        ("filesystem-mcp", ["node", "/app/dist/index.js", "/projects"], "tools/list", "tools/call"),
+        ("netbox-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("google-search-mcp", ["node", "/app/build/index.js"], "tools/list", "tools/call"),
+        ("servicenow-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("email-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
+        ("chatgpt-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("quickchart-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),
+        ("vegalite-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("mermaid-mcp", ["node", "dist/index.js"], "tools/list", "tools/call"),
+        ("rfc-mcp", ["node", "build/index.js"], "tools/list", "tools/call"),    
+        ("nist-mcp", ["python3", "server.py", "--oneshot"], "tools/discover", "tools/call"),
+        ("drawio-mcp", "http://host.docker.internal:11434/rpc", "tools/list", "tools/call"),
+        ("subnet-calculator-mcp", ["python3", "main.py", "--oneshot"], "tools/discover", "tools/call")
         ("ise-mcp", ["python3", "main.py", "--oneshot"], "tools/discover", "tools/call")
+        ("wikipedia-mcp", ["python3", "main.py"], "tools/discover", "tools/call"),
+        ("aci-mcp", ["python3", "main.py"], "tools/discover", "tools/call")
     ]
 
     try:
