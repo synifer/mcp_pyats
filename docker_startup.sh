@@ -103,9 +103,9 @@ echo "Building drawio-mcp image..."
 docker build -t drawio-mcp ./mcp_servers/drawio_mcp
 echo "drawio-mcp image built successfully"
 
-echo "Building a2a-adapter image..."
-docker build -t a2a-adapter ./a2a
-echo "a2a-adapter image built successfully"
+echo "Building a2a image..."
+docker build -t a2a ./a2a
+echo "a2a image built successfully"
 
 echo "Building streamlit-app image..."
 docker build -t streamlit-app ./streamlit
@@ -252,20 +252,16 @@ echo "aci-mcp container started."
 
 sleep 2
 
-echo "Starting a2a-adapter container..."
 docker run -p 10000:10000 \
-    -dit \
-    --name a2a-adapter \
-    -v $(pwd)/a2a:/a2a \
-    --env-file .env \
-    -e LANGGRAPH_URL=http://host.docker.internal:2024 \
-    -e PUBLIC_BASE_URL=https://ee30-70-53-207-50.ngrok-free.app/ \
-    -v /home/johncapobianco/MCPyATS/shared_output:/output \
-    -e A2A_PORT=10000 \
-    a2a-adapter
-echo "a2a-adapter container started."
-
-sleep 5
+  -dit \
+  --name a2a \
+  --add-host=host.docker.internal:host-gateway \
+  --env-file .env \
+  -e LANGGRAPH_URL=http://host.docker.internal:2024 \
+  -e PUBLIC_BASE_URL=https://cd93-69-156-133-54.ngrok-free.app/ \
+  -v $(pwd)/a2a:/a2a \
+  -v /home/johncapobianco/MCPyATS/shared_output:/output \
+  a2a
 
 docker run -dit \
   --name mcpyats \
