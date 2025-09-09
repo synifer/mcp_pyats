@@ -1,0 +1,191 @@
+---
+testbed:
+  name: lab-testbed
+  credentials:
+    default:
+      username: ${PYATS_USERNAME}
+      password: ${PYATS_PASSWORD}
+    enable:
+      password: ${PYATS_ENABLE}   # потрібно лише для IOS-XE
+
+devices:
+
+  core1:
+    alias: "core1"
+    type: router
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: core1
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  core2:
+    alias: "core2"
+    type: router
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: core2
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  leaf101:
+    alias: "leaf101"
+    type: router
+    os: nxos
+    platform: NX-OS
+    connections:
+      cli:
+        protocol: ssh
+        ip: leaf101
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  leaf102:
+    alias: "leaf102"
+    type: router
+    os: nxos
+    platform: NX-OS
+    connections:
+      cli:
+        protocol: ssh
+        ip: leaf102
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  agg1:
+    alias: "agg1"
+    type: switch
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: agg1
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  agg2:
+    alias: "agg2"
+    type: switch
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: agg2
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  access1:
+    alias: "access1"
+    type: switch
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: access1
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  access2:
+    alias: "access2"
+    type: switch
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: access2
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  edge1:
+    alias: "edge1"
+    type: router
+    os: iosxe
+    platform: IOS-XE
+    credentials:
+      default:
+        username: ${PYATS_USERNAME}
+        password: ${PYATS_PASSWORD}
+      enable:
+        password: ${PYATS_ENABLE}
+    connections:
+      cli:
+        protocol: ssh
+        ip: edge1
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  edge2:
+    alias: "edge2"
+    type: router
+    os: iosxe
+    platform: IOS-XE
+    credentials:
+      default:
+        username: ${PYATS_USERNAME}
+        password: ${PYATS_PASSWORD}
+      enable:
+        password: ${PYATS_ENABLE}
+    connections:
+      cli:
+        protocol: ssh
+        ip: edge2
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  cat1:
+    alias: "cat1"
+    type: switch
+    os: iosxe
+    platform: Catalyst
+    credentials:
+      default:
+        username: ${PYATS_USERNAME}
+        password: ${PYATS_PASSWORD}
+      enable:
+        password: ${PYATS_ENABLE}
+    connections:
+      cli:
+        protocol: ssh
+        ip: cat1
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  cat2:
+    alias: "cat2"
+    type: switch
+    os: iosxe
+    platform: Catalyst
+    credentials:
+      default:
+        username: ${PYATS_USERNAME}
+        password: ${PYATS_PASSWORD}
+      enable:
+        password: ${PYATS_ENABLE}
+    connections:
+      cli:
+        protocol: ssh
+        ip: cat2
+        port: 22
+        arguments:
+          connection_timeout: 360
