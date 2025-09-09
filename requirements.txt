@@ -1,0 +1,8 @@
+streamlit
+pyats
+genie
+unicon
+paramiko
+python-dotenv
+httpx
+pydantic
