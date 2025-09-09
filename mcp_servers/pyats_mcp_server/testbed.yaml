@@ -1,156 +1,191 @@
 ---
+testbed:
+  name: lab-testbed
+  credentials:
+    default:
+      username: ${PYATS_USERNAME}
+      password: ${PYATS_PASSWORD}
+    enable:
+      password: ${PYATS_ENABLE}   # потрібно лише для IOS-XE
+
 devices:
-  r0:
-    alias: "r0"
-    type: "router"
-    os: "iosxe"
-    platform: Cat9kv
+
+  core1:
+    alias: "core1"
+    type: router
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: core1
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  core2:
+    alias: "core2"
+    type: router
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: core2
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  leaf101:
+    alias: "leaf101"
+    type: router
+    os: nxos
+    platform: NX-OS
+    connections:
+      cli:
+        protocol: ssh
+        ip: leaf101
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  leaf102:
+    alias: "leaf102"
+    type: router
+    os: nxos
+    platform: NX-OS
+    connections:
+      cli:
+        protocol: ssh
+        ip: leaf102
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  agg1:
+    alias: "agg1"
+    type: switch
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: agg1
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  agg2:
+    alias: "agg2"
+    type: switch
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: agg2
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  access1:
+    alias: "access1"
+    type: switch
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: access1
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  access2:
+    alias: "access2"
+    type: switch
+    os: aoscx
+    platform: Aruba-CX
+    connections:
+      cli:
+        protocol: ssh
+        ip: access2
+        port: 22
+        arguments:
+          connection_timeout: 360
+
+  edge1:
+    alias: "edge1"
+    type: router
+    os: iosxe
+    platform: IOS-XE
     credentials:
       default:
-        username: ptcapo
-        password: 9g-y0QMgq8EOL_D
+        username: ${PYATS_USERNAME}
+        password: ${PYATS_PASSWORD}
       enable:
-        password: 9g-y0QMgq8EOL_D
+        password: ${PYATS_ENABLE}
     connections:
       cli:
         protocol: ssh
-        ip: devnetsandboxiosxec9k.cisco.com
+        ip: edge1
         port: 22
         arguments:
           connection_timeout: 360
-  Cat8000V:
-    alias: "Always On"
-    type: "router"
-    os: "iosxe"
-    platform: CSR1kv
+
+  edge2:
+    alias: "edge2"
+    type: router
+    os: iosxe
+    platform: IOS-XE
     credentials:
       default:
-        username: admin
-        password: C1sco12345
-    connections:
-      cli:
-        protocol: ssh
-        ip: devnetsandboxiosxe.cisco.com
-        port: 22
-        arguments:
-          connection_timeout: 360
-  R1:
-    alias: "Sandbox Router01"
-    type: "router"
-    os: "iosxe"
-    platform: CSR1kv
-    credentials:
-      default:
-        username: cisco
-        password: cisco
+        username: ${PYATS_USERNAME}
+        password: ${PYATS_PASSWORD}
       enable:
-        password: cisco
+        password: ${PYATS_ENABLE}
     connections:
       cli:
         protocol: ssh
-        ip: 10.10.20.171
+        ip: edge2
         port: 22
         arguments:
           connection_timeout: 360
-  R2:
-    alias: "Sandbox Router02"
-    type: "router"
-    os: "iosxe"
-    platform: CSR1kv
+
+  cat1:
+    alias: "cat1"
+    type: switch
+    os: iosxe
+    platform: Catalyst
     credentials:
       default:
-        username: cisco
-        password: cisco
+        username: ${PYATS_USERNAME}
+        password: ${PYATS_PASSWORD}
       enable:
-        password: cisco
+        password: ${PYATS_ENABLE}
     connections:
       cli:
         protocol: ssh
-        ip: 10.10.20.172
+        ip: cat1
         port: 22
         arguments:
           connection_timeout: 360
-  SW1:
-    alias: "Sandbox Switch01"
-    type: "switch"
-    os: "iosxe"
-    platform: CSR1kv
+
+  cat2:
+    alias: "cat2"
+    type: switch
+    os: iosxe
+    platform: Catalyst
     credentials:
       default:
-        username: cisco
-        password: cisco
+        username: ${PYATS_USERNAME}
+        password: ${PYATS_PASSWORD}
       enable:
-        password: cisco
+        password: ${PYATS_ENABLE}
     connections:
       cli:
         protocol: ssh
-        ip: 10.10.20.173
-        port: 22
-        arguments:
-          connection_timeout: 360
-  SW2:
-    alias: "Sandbox Switch02"
-    type: "switch"
-    os: "iosxe"
-    platform: CSR1kv
-    credentials:
-      default:
-        username: cisco
-        password: cisco
-      enable:
-        password: cisco
-    connections:
-      cli:
-        protocol: ssh
-        ip: 10.10.20.174
-        port: 22
-        arguments:
-          connection_timeout: 360
-  PC1:
-    alias: "Sandbox PC1"
-    type: "host"
-    os: "linux"
-    platform: alpine
-    credentials:
-      default:
-        username: cisco
-        password: cisco
-    connections:
-      cli:
-        protocol: ssh
-        ip: 10.10.20.177
-        port: 22
-        arguments:
-          connection_timeout: 360
-  PC2:
-    alias: "Sandbox PC2"
-    type: "host"
-    os: "linux"
-    platform: alpine
-    credentials:
-      default:
-        username: cisco
-        password: cisco
-    connections:
-      cli:
-        protocol: ssh
-        ip: 10.10.20.178
-        port: 22
-        arguments:
-          connection_timeout: 360                  
-  DESKTOP:
-    alias: "Ubuntu Local"
-    type: "host"
-    os: "linux"
-    platform: ubuntu
-    credentials:
-      default:
-        username: johncapobianco
-        password: Timbit@123
-    connections:
-      cli:
-        protocol: ssh
-        ip: 172.22.164.213
+        ip: cat2
         port: 22
         arguments:
           connection_timeout: 360
