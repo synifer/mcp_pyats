@@ -1,4 +1,8 @@
 import os
+import streamlit as st
+os.environ.update(st.secrets)
+
+import os
 import json
 import traceback
 import streamlit as st
