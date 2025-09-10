@@ -1,6 +1,18 @@
 import os
+try:
+    from pydub import AudioSegment
+except Exception:
+    AudioSegment = None
 import streamlit as st
+try:
+    from pydub import AudioSegment
+except Exception:
+    AudioSegment = None
 os.environ.update(st.secrets)
+try:
+    from pydub import AudioSegment
+except Exception:
+    AudioSegment = None
 
 import os
 import json
@@ -9,7 +21,6 @@ import streamlit as st
 import httpx
 from tempfile import NamedTemporaryFile
 from dotenv import load_dotenv
-from pydub import AudioSegment
 from urllib.parse import urlparse, parse_qs
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 import asyncio
