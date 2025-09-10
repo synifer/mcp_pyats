@@ -6,3 +6,4 @@ paramiko
 python-dotenv
 httpx
 pydantic
+authlib
